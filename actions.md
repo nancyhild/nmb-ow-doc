@@ -102,7 +102,10 @@ This command prints the following result to the terminal:
 
 ## Pass parameters to actions
 
-Actions can receive parameters as input with the following flag:
+Sometimes it's necessary or just convenient to provide values for function parameters. They can serve as defaults or as a way of reusing an action but with different parameters. Parameters can be bound to an action
+and unless overridden later by an invocation, they provide the specified value to the function.
+
+Actions receive parameters as input with the following flag:
 
  ```
    --param key value
@@ -118,27 +121,79 @@ The `demo/hello` action accepts two optional input arguments, which are used to 
 Here's how these parameters look in the `nim action invoke` command:
 
 ```
-nim action invoke /demo/hello --result --param name Dorothy --param place Kansas
+nim action invoke /demo/hello --param name Dorothy --param place Kansas
 {
   "msg": "Hello, Dorothy from Kansas!"
 }
 ```
 
-## Synchronous vs. asynchronous requests
+<----------- **[[NH: I'd like to delete the following section. It seems to repeat what was in this previous 'parameters' section. Also I don't see any `action update` command in `nim`.]]**
+### Binding parameters to actions
 
-By default, the `nim action invoke` command is synchronous, while the OpenWhisk 'wsk action invoke' command is asynchronous. What's the difference between the two?
+Sometimes it's necessary or just convenient to provide values for function parameters. They can serve as defaults or as a way of reusing an action but with different parameters. Parameters can be bound to an action
+and unless overridden later by an invocation, they provide the specified value to the function.
 
-### Synchronous requests
+Here's an example.
 
-By default, the `nim action invoke` command is synchronous, meaning it waits for the activation result to be available. Synchronous requests are generally useful for rapid iteration and development, because you see the result. A synchronous request is also called a _blocking invocation_ request, meaning the CLI _blocks_ until the activation completes.
+```
+wsk action invoke demo/hello
+{
+  "msg": "Hello, stranger from somewhere!"
+}
+```
+```
+wsk action update demo/hello --param name Toto
+ok: updated action greeting
+```
+```
+wsk action invoke demo/hello
+{
+  "msg": "Hello, Toto from somewhere!"
+}
+```
+
+You can still provide additional parameters, as in the `place`:
+```
+wsk action invoke demo/hello  --param place Kansas
+{
+  "msg": "Hello, Toto from Kansas!"
+}
+```
+and even override the `name`:
+```
+wsk action invoke greeting --param place Kansas --param name Dorothy
+{
+  "msg": "Hello, Dorothy from Kansas!"
+}
+```
+------------>
+
+
+
+## Action execution
+
+When an invocation request is received, the system records the request and dispatches an activation.
+
+
+The system attempts to invoke the action once and records the `status` in the [activation record](#the-activation-record). Every invocation that is successfully received, and that the user might be billed for, will eventually have an activation record. See the section on [the activation record](#the-activation-record) for more details.
+
+**Note:** If there's a network failure or other failure which intervenes before you receive an HTTP response, it's possible that `nim` received and processed the request. Check the activation record.
+
+### System return from an invocation request
+
+What the system returns from an invocation request depends on whether the invocation is synchronous or asynchronous.
+
+#### Synchronous requests
+
+By default, the `nim action invoke` command is synchronous, meaning it waits for the activation result to be available. Synchronous requests are generally useful for rapid iteration and development, because you see the result. A synchronous request is also called a _blocking invocation request_, meaning the CLI _blocks_ until the activation completes.
 
 The wait period for a blocking invocation request is the lesser of 60 seconds (the default for blocking invocations) or a configured timeout. If the time limit is exceeded, the activation continues processing in the system and an activation ID is returned so that you can check for the result later, the same as the result for asynchronous (nonblocking) requests.
 
-When an action exceeds its configured time limit, [an error is recorded in the activation record](#understanding-the-activation-record).
+When an action exceeds its configured time limit, [an error is recorded in the activation record](#the-activation-record).
 
-### Asynchronous requests
+#### Asynchronous requests
 
-In contrast, the OpenWhisk `wsk action invoke` is asynchronous by default, meaning that the HTTP request terminates once the system has accepted the request to invoke an action. With an asynchronous request, the action is invoked and the nim platform returns an activation ID, which you can use to retrieve the activation record.
+In contrast, when the activation request is asynchronous, the HTTP request terminates once the system has accepted the request to invoke an action. With an asynchronous request, the system returns an activation ID to confirm that the invocation was received. You can use this ID to retrieve the activation record.
 
 To run a `nim` command asynchronously, use the `--no-wait` parameter, or `-n` for short, as in this command for the `example1` project to invoke the `demo/hello` action:
 
@@ -146,9 +201,44 @@ To run a `nim` command asynchronously, use the `--no-wait` parameter, or `-n` fo
  nim action invoke demo/hello --no-wait
 ```
 
-### Working with activations
+**Tip:** If you're an OpenWhisk developer, you'll notice that the `wsk action invoke` is asynchronous by default, wherease the `nim action invoke` command is synchronous by default.
+
+#### The activation record
+
+Each invocation of an action results in an activation record, which contains the following fields:
+
+- `activationId`: The activation ID.
+- `namespace` and `name`: The namespace and name of the entity.
+- `start` and `end`: Timestamps recording the start and end of the activation. The values are in [UNIX time format](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15).
+- `logs`: An array of strings with the logs that are produced by the action during its activation. Each array element corresponds to a line output to `stdout` or `stderr` by the action, and includes the time and stream of the log output. The structure is as follows: `TIMESTAMP` `STREAM:` `LOG LINE`.
+- `annotations`: An array of key-value pairs that record [metadata](annotations.md#annotations-specific-to-activations) about the action activation.
+- `response`: A dictionary that defines the following keys
+  - `status`: The activation result, which might be one of the following values:
+    - *"success"*: the action invocation completed successfully.
+    - *"application error"*: the action was invoked, but returned an error value on purpose, for instance because a precondition on the arguments was not met.
+    - *"action developer error"*: the action was invoked, but it completed abnormally, for instance the action did not detect an exception, or a syntax error existed. This status code is also returned under specific conditions such as:
+      - the action failed to initialize for any reason
+      - the action exceeded its time limit during the init or run phase
+      - the action specified a wrong docker container name
+      - the action did not properly implement the expected [runtime protocol](actions-new.md)
+    - *"whisk internal error"*: the system was unable to invoke the action.
+  - `statusCode`: A value between 0 and 3 that maps to the activation result, as described by the *status* field:
+
+    | statusCode | status                 |
+    |:---------- |:---------------------- |
+    | 0          | success                |
+    | 1          | application error      |
+    | 2          | action developer error |
+    | 3          | whisk internal error   |
+  - `success`: Is *true* if and only if the status is *"success"*.
+  - `result`: A dictionary as a JSON object which contains the activation result. If the activation was successful, this contains the value that is returned by the action. If the activation was unsuccessful, `result` contains the `error` key, generally with an explanation of the failure.
+
+### Working with `nim action activation` commands
 
 Here are some common `nim` commands for viewing all or parts of the activation record.
+
+<------ **[[NH: I found this line in the CLI guide but am not sure it applies here.]]
+**Note:** The `nim` command supports the `activation` command when used individually, but not as part of a project.  ------------>
 
 - `nim activation list`: lists all activations. See the next section for a detailed description.
 - `nim activation get --last`: retrieves the most recent activation record
@@ -198,141 +288,36 @@ Here's the meaning of each column in the list:
 | `Status` | The outcome of the invocation. For an explanation of the various statuses, see the description of the `statusCode` below. |
 | `Entity` | The fully qualified name of entity that was invoked. |
 
-#### The activation record
 
-Each invocation of an action results in an activation record, which contains the following fields:
+<------ **[[NH: Not sure this following section is necessary or if this is the right location for it.]]**
+## Create and update your own actions
 
-- `activationId`: The activation ID.
-- `namespace` and `name`: The namespace and name of the entity.
-- `start` and `end`: Timestamps recording the start and end of the activation. The values are in [UNIX time format](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15).
-- `logs`: An array of strings with the logs that are produced by the action during its activation. Each array element corresponds to a line output to `stdout` or `stderr` by the action, and includes the time and stream of the log output. The structure is as follows: `TIMESTAMP` `STREAM:` `LOG LINE`.
-- `annotations`: An array of key-value pairs that record [metadata](annotations.md#annotations-specific-to-activations) about the action activation.
-- `response`: A dictionary that defines the following keys
-  - `status`: The activation result, which might be one of the following values:
-    - *"success"*: the action invocation completed successfully.
-    - *"application error"*: the action was invoked, but returned an error value on purpose, for instance because a precondition on the arguments was not met.
-    - *"action developer error"*: the action was invoked, but it completed abnormally, for instance the action did not detect an exception, or a syntax error existed. This status code is also returned under specific conditions such as:
-      - the action failed to initialize for any reason
-      - the action exceeded its time limit during the init or run phase
-      - the action specified a wrong docker container name
-      - the action did not properly implement the expected [runtime protocol](actions-new.md)
-    - *"whisk internal error"*: the system was unable to invoke the action.
-  - `statusCode`: A value between 0 and 3 that maps to the activation result, as described by the *status* field:
+You've seen the basic project structure for an action. There are many variations on project structure that the Nimbella deployer recognizes: multiple packages, no package, multiple actions within a directory, multiple action directories. Project directory structure and configuration is described in detail the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure).
 
-    | statusCode | status                 |
-    |:---------- |:---------------------- |
-    | 0          | success                |
-    | 1          | application error      |
-    | 2          | action developer error |
-    | 3          | whisk internal error   |
-  - `success`: Is *true* if and only if the status is *"success"*.
-  - `result`: A dictionary as a JSON object which contains the activation result. If the activation was successful, this contains the value that is returned by the action. If the activation was unsuccessful, `result` contains the `error` key, generally with an explanation of the failure.
+You'll need to install the `nim` desktop client, as described in that guide. With `nim` installed, you can deploy Nimbella projects to the Cloud from your local desktop or from GitHub.  -------->
 
-### Create and update your own action
 
-Earlier we saved the code from the `greeting` action locally. We can use it to create our own version of the actionin our own namespace.
-```
-wsk action create greeting greeting.js
-ok: created action greeting
-```
+### Further considerations for creating actions
 
-For convenience, you can omit the namespace when working with actions that belong to you. Also if there
-is no package, then you simply use the action name without a [package](packages.md) name.
-If you modify the code and want to update the action, you can use `wsk action update` instead of
-`wsk action create`. The two commands are otherwise the same in terms of their command like parameters.
+- Functions should be stateless, or *idempotent*. While the system does not enforce this property, there is no guarantee that any state maintained by an action will be available across invocations. In some cases, deliberately leaking state across invocations may be advantageous for performance, but also exposes some risks.
 
-```
-wsk action update greeting greeting.js
-ok: updated action greeting
-```
+- An action executes in a sandboxed environment, namely a container. At any given time, a single activation will execute inside the container. Subsequent invocations of the same action may reuse a previous container, and there may exist more than one container at any given time, each having its own state.
 
-### Binding parameters to actions
+- Invocations of an action are not ordered. If the user invokes an action twice from the command line or the REST API, the second invocation might run before the first. If the actions have side effects, they might be observed in any order.
 
-Sometimes it is necessary or just convenient to provide values for function parameters. These can serve as
-defaults, or as a way of reusing an action but with different parameters. Parameters can be bound to an action
-and unless overridden later by an invocation, they will provide the specified value to the function.
+- There is no guarantee that actions will execute atomically. Two actions can run concurrently and their side effects can be interleaved. OpenWhisk does not ensure any particular concurrent consistency model for side effects. Any concurrency side effects will be implementation-dependent.
 
-Here is an example.
+- Actions have two phases: an initialization phase, and a run phase. During initialization, the function is loaded and prepared for execution. The run phase receives the action parameters provided at invocation time. Initialization is skipped if an action is dispatched to a previously initialized container. This is referred to as a _warm start_. You can tell if an [invocation was a warm activation or a cold one requiring initialization](annotations.md#annotations-specific-to-activations) by inspecting the activation record.
 
-```
-wsk action invoke greeting --result
-{
-  "msg": "Hello, stranger from somewhere!"
-}
-```
-```
-wsk action update greeting --param name Toto
-ok: updated action greeting
-```
-```
-wsk action invoke greeting --result
-{
-  "msg": "Hello, Toto from somewhere!"
-}
-```
+- An action runs for a bounded amount of time. This limit can be configured per action, and applies to both the initialization and the execution separately. If the action time limit is exceeded during the initialization or run phase, the activation's response status is _action developer error_.
 
-You may still provide additional parameters, as in the `place`:
-```
-wsk action invoke greeting --result --param place Kansas
-{
-  "msg": "Hello, Toto from Kansas!"
-}
-```
-and even override the `name`:
-```
-wsk action invoke greeting --result --param place Kansas --param name Dorothy
-{
-  "msg": "Hello, Dorothy from Kansas!"
-}
-```
-
-### Action execution
-
-When an invocation request is received, the system records the request and dispatches an activation.
-
-The system returns an activation ID (in the case of a non-blocking invocation) to confirm that the invocation was received.
-Notice that if there's a network failure or other failure which intervenes before you receive an HTTP response, it is possible
-that OpenWhisk received and processed the request.
-
-The system attempts to invoke the action once and records the `status` in the [activation record](#understanding-the-activation-record).
-Every invocation that is successfully received, and that the user might be billed for, will eventually have an activation record.
-
-Note that in the case of [*action developer error*](#understanding-the-activation-record), the action may
-have partially run and generated externally visible side effects. It is the user's responsibility to check
-whether such side effects actually happened, and issue retry logic if desired.
-Also note that certain [*whisk internal errors*](#understanding-the-activation-record) will indicate that
-an action started running but the system failed before the action registered completion.
-
-### Further considerations
-- Functions should be stateless, or *idempotent*. While the system does not enforce this property,
-there is no guarantee that any state maintained by an action will be available across invocations. In some cases,
-deliberately leaking state across invocations may be advantageous for performance, but also exposes some risks.
-- An action executes in a sandboxed environment, namely a container. At any given time, a single activation will
-execute inside the container. Subsequent invocations of the same action may reuse a previous container,
-and there may exist more than one container at any given time, each having its own state.
-- Invocations of an action are not ordered. If the user invokes an action twice from the command line or the REST API,
-the second invocation might run before the first. If the actions have side effects, they might be observed in any order.
-- There is no guarantee that actions will execute atomically. Two actions can run concurrently and their side effects
-can be interleaved. OpenWhisk does not ensure any particular concurrent consistency model for side effects.
-Any concurrency side effects will be implementation-dependent.
-- Actions have two phases: an initialization phase, and a run phase. During initialization, the function is loaded
-and prepared for execution. The run phase receives the action parameters provided at invocation time. Initialization
-is skipped if an action is dispatched to a previously initialized container --- this is referred to as a _warm start_.
-You can tell if an [invocation was a warm activation or a cold one requiring initialization](annotations.md#annotations-specific-to-activations)
-by inspecting the activation record.
-- An action runs for a bounded amount of time. This limit can be configured per action, and applies to both the
-initialization and the execution separately. If the action time limit is exceeded during the initialization or run phase, the activation's response status is _action developer error_.
-- Functions should follow best practices to reduce [vulnerabilities](security.md) by treating input as untrusted,
-and be aware of vulnerabilities they may inherit from third-party dependencies.
+- Functions should follow best practices to reduce [vulnerabilities](security.md) by treating input as untrusted, and be aware of vulnerabilities they may inherit from third-party dependencies.
 
 ## Creating action sequences
 
-A powerful feature of the OpenWhisk programming model is the ability to compose actions together. A common
-composition is a sequence of actions, where the result of one action becomes the input to the next action in
-the sequence.
+A powerful feature of the OpenWhisk programming model is the ability to compose actions together. A common composition is a sequence of actions, where the result of one action becomes the input to the next action in the sequence.
 
-Here we will use several utility actions that are provided in the `/whisk.system/utils`
-[package](packages.md) to create your first sequence.
+Here we will use several utility actions that are provided in the `/whisk.system/utils` [package](packages.md) to create your first sequence.
 
 1. Display the actions in the `/whisk.system/utils` package.
 
@@ -377,11 +362,8 @@ Here we will use several utility actions that are provided in the `/whisk.system
 
   In the result, you see that the lines are sorted.
 
-**Note**: Parameters passed between actions in the sequence are explicit, except for default parameters.
-Therefore parameters that are passed to the sequence action (e.g., `mySequence`) are only available to the first action in the sequence.
-The result of the first action in the sequence becomes the input JSON object to the second action in the sequence (and so on).
-This object does not include any of the parameters originally passed to the sequence unless the first action explicitly includes them in its result.
-Input parameters to an action are merged with the action's default parameters, with the former taking precedence and overriding any matching default parameters.
+**Note**: Parameters passed between actions in the sequence are explicit, except for default parameters. Therefore parameters that are passed to the sequence action (e.g., `mySequence`) are only available to the first action in the sequence. The result of the first action in the sequence becomes the input JSON object to the second action in the sequence (and so on). This object does not include any of the parameters originally passed to the sequence unless the first action explicitly includes them in its result. Input parameters to an action are merged with the action's default parameters, with the former taking precedence and overriding any matching default parameters.
+
 For more information about invoking action sequences with multiple named parameters, learn about [setting default parameters](parameters.md#setting-default-parameters).
 
 A more advanced form of composition using *conductor* actions is described [here](conductors.md).
