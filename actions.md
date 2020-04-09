@@ -24,7 +24,7 @@ To use a function as an action, it must conform to the following requirements:
 
   The mechanics may vary depending on your choice of language, but in general the entry point can be specified using the `--main` flag in `nim` commands.
 
-### Create action
+## Create an action
 
 Actions are contained within Nimbella projects that you create, and they are identified by fully qualified names that generally take the following form:
 
@@ -64,7 +64,7 @@ function main(params) {
 }
 ```
 
-### Invoke an action
+## Invoke an action
 
 Here's the `nim` command to invoke an action:
 
@@ -72,13 +72,21 @@ Here's the `nim` command to invoke an action:
 nim action:invoke ACTIONNAME
 ```
 
+The colon is optional, so this form is also acceptable:
+
+```
+nim action invoke ACTIONNAME
+```
+
+>**Tip for OpenWhisk developers:**
+
+  >The `nim action invoke` command has somewhat different parameters than the `wsk action invoke` command:
+
+>  * `nim action invoke` with no parameters is equivalent to `wsk action invoke --result` (or `-r`)
+>  * `nim action invoke --full` (or `-f` for short) is equivalent to `wsk action invoke --blocking` (or `-b` for short)
+>  * `nim action invoke --no-wait` (or `-n` for short) is equivalent to `wsk action invoke`
+
 For the `example1` project, the exact command is:
-
-```
-nim action:invoke demo/hello
-```
-
-The colon in this command is optional, so the following form of the command is also acceptable:
 
 ```
 nim action invoke demo/hello
@@ -92,9 +100,9 @@ This command prints the following result to the terminal:
 }
 ```
 
-### Pass parameters to actions
+## Pass parameters to actions
 
-Actions may receive parameters as input with the following flag:
+Actions can receive parameters as input with the following flag:
 
  ```
    --param key value
@@ -102,10 +110,10 @@ Actions may receive parameters as input with the following flag:
 
 where `key` is the property name and `value` is any valid JSON value.
 
-The `demo/hello` action accepts two optional input arguments, which are used to tailor the response. The default greeting is "Hello, stranger from somewhere!". The words "stranger" and "somewhere" may be replaced by specifying the following parameters:
+The `demo/hello` action accepts two optional input arguments, which are used to tailor the response, so the default output greeting is "Hello, stranger from somewhere!". Let's replace the words "stranger" and "somewhere" by specifying the following parameters:
 
-- `name` whose value will replace the word "stranger",
-- `place` whose value will replace the word "somewhere".
+* `name`, whose value will replace the word "stranger"
+* `place`, whose value will replace the word "somewhere"
 
 Here's how these parameters look in the `nim action invoke` command:
 
@@ -116,121 +124,83 @@ nim action invoke /demo/hello --result --param name Dorothy --param place Kansas
 }
 ```
 
-### Request-Response vs Fire-and-Forget
+## Synchronous vs. asynchronous requests
 
-The style of invocation shown above is synchronous in that the request from the CLI _blocks_ until the
-activation completes and the result is available from the OpenWhisk platform. This is generally useful
-for rapid iteration and development.
+By default, the `nim action invoke` command is synchronous, while the OpenWhisk 'wsk action invoke' command is asynchronous. What's the difference between the two?
 
-You can invoke an action asynchronously as well, by dropping the `--result` command line option. In this case
-the action is invoked, and the OpenWhisk platform returns an activation ID which you can use later to retrieve
-the activation record.
+### Synchronous requests
+
+By default, the `nim action invoke` command is synchronous, meaning it waits for the activation result to be available. Synchronous requests are generally useful for rapid iteration and development, because you see the result. A synchronous request is also called a _blocking invocation_ request, meaning the CLI _blocks_ until the activation completes.
+
+The wait period for a blocking invocation request is the lesser of 60 seconds (the default for blocking invocations) or a configured timeout. If the time limit is exceeded, the activation continues processing in the system and an activation ID is returned so that you can check for the result later, the same as the result for asynchronous (nonblocking) requests.
+
+When an action exceeds its configured time limit, [an error is recorded in the activation record](#understanding-the-activation-record).
+
+### Asynchronous requests
+
+In contrast, the OpenWhisk `wsk action invoke` is asynchronous by default, meaning that the HTTP request terminates once the system has accepted the request to invoke an action. With an asynchronous request, the action is invoked and the nim platform returns an activation ID, which you can use to retrieve the activation record.
+
+To run a `nim` command asynchronously, use the `--no-wait` parameter, or `-n` for short, as in this command for the `example1` project to invoke the `demo/hello` action:
 
  ```
-wsk action invoke /whisk.system/samples/greeting
-ok: invoked /whisk.system/samples/greeting with id 5a64676ec8aa46b5a4676ec8aaf6b5d2
- ```
-
-To retrieve the activation record, you use the `wsk activation get <id>` command, as in:
+ nim action invoke demo/hello --no-wait
 ```
-wsk activation get 5a64676ec8aa46b5a4676ec8aaf6b5d2
-ok: got activation 5a64676ec8aa46b5a4676ec8aaf6b5d2
-{
-  "activationId": "5a64676ec8aa46b5a4676ec8aaf6b5d2",
-  "duration": 3,
-  "response": {
-    "result": {
-      "msg": "Hello, stranger from somewhere!"
-    },
-    "status": "success",
-    "success": true
-  }, ...
-}
-```
-
-Sometimes it is helpful to invoke an action in a blocking style and receiving the activation record entirely
-instead of just the result. This is achieved using the `--blocking` command line parameter.
-
-```
-wsk action invoke /whisk.system/samples/greeting --blocking
-ok: invoked /whisk.system/samples/greeting with id 5975c24de0114ef2b5c24de0118ef27e
-{
-  "activationId": "5975c24de0114ef2b5c24de0118ef27e",
-  "duration": 3,
-  "response": {
-    "result": {
-      "msg": "Hello, stranger from somewhere!"
-    },
-    "status": "success",
-    "success": true
-  }, ...
-}
-```
-
-### Blocking invocations and timeouts
-
-A blocking invocation request will _wait_ for the activation result to be available. The wait period
-is the lesser of 60 seconds (this is the default for blocking invocations) or the action's configured
-[time limit](reference.md#per-action-timeout-ms-default-60s).
-
-The result of the activation is returned if it is available within the blocking wait period.
-Otherwise, the activation continues processing in the system and an activation ID is returned
-so that one may check for the result later, as with non-blocking requests
-(see [here](#watching-action-output) for tips on monitoring activations).
-When an action exceeds its configured time limit, the activation record will indicate this error.
-See [understanding the activation record](#understanding-the-activation-record) for more details.
 
 ### Working with activations
 
-Some common CLI commands for working with activations are:
-- `wsk activation list`: lists all activations
-- `wsk activation get --last`: retrieves the most recent activation record
-- `wsk activation result <activationId>`: retrieves only the result of the activation (or use `--last` to get the most recent result).
-- `wsk activation logs <activationId>`: retrieves only the logs of the activation.
+Here are some common `nim` commands for viewing all or parts of the activation record.
+
+- `nim activation list`: lists all activations. See the next section for a detailed description.
+- `nim activation get --last`: retrieves the most recent activation record
+- `nim activation result <activationId>`: retrieves only the result of the activation (or use `--last` to get the most recent result).
+- `nim activation logs <activationId>`: retrieves only the logs of the activation.
 - `wsk activation logs <activationId> --strip`: strips metadata from each log line so the logs are easier to read.
 
-#### The `wsk activation list` command
+#### `nim activation list` command flags
 
-The `activation list` command lists all activations, or activations filtered by namespace or name. The result set can be limited by using several flags:
+The `nim activation list` command lists all activations or activations filtered by namespace or name. The result set can be limited by using flags:
+
+| Flag | Short option | Description |
+| :--------- | :--- | :------- |
+| `--full` | `-f` | include full activation description |
+| `--limit LIMIT` | `-l` | only return LIMIT number of activations from the collection with a maximum LIMIT of 200 activations (default 30) |
+| `--since SINCE` | | return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970 |
+| `--skip SKIP` | `-s` | exclude the first SKIP number of activations from the result |
+| `--upto UPTO` | | Return activations with timestamps earlier than UPTO; measured in milliseconds since Th, 01, Jan 1970 |
+
+#### `nim activation list` example
+
+List the last six activations:
 
 ```
-Flags:
-  -f, --full          include full activation description
-  -l, --limit LIMIT   only return LIMIT number of activations from the collection with a maximum LIMIT of 200 activations (default 30)
-      --since SINCE   return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970
-  -s, --skip SKIP     exclude the first SKIP number of activations from the result
-      --upto UPTO     return activations with timestamps earlier than UPTO; measured in milliseconds since Th, 01, Jan 1970
+nim activation list --limit 6
 ```
 
-For example, to list the last 6 activations:
-```
-wsk activation list --limit 6
-```
-<pre>
-Datetime            Activation ID                    Kind      Start Duration   Status  Entity
-2019-03-16 20:03:00 8690bc9904794c9390bc9904794c930e nodejs:6  warm  2ms        success guest/tripleAndIncrement:0.0.1
-2019-03-16 20:02:59 7e76452bec32401db6452bec32001d68 nodejs:6  cold  32ms       success guest/increment:0.0.1
-2019-03-16 20:02:59 097250ad10a24e1eb250ad10a23e1e96 nodejs:6  warm  2ms        success guest/tripleAndIncrement:0.0.1
-2019-03-16 20:02:58 4991a50ed9ed4dc091a50ed9edddc0bb nodejs:6  cold  33ms       success guest/triple:0.0.1
-2019-03-16 20:02:57 aee63124f3504aefa63124f3506aef8b nodejs:6  cold  34ms       success guest/tripleAndIncrement:0.0.1
-2019-03-16 20:02:57 22da217c8e3a4b799a217c8e3a0b79c4 sequence  warm  3.46s      success guest/tripleAndIncrement:0.0.1
+| Datetime | Activation ID | Kind | Start | Duration | Status | Entity |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 2019-03-16 20:03:00 | 8690bc9904794c9390bc9904794c930e | nodejs:6  | warm  | 2ms | success | guest/tripleAndIncrement:0.0.1 |
+| 2019-03-16 20:02:59 | 7e76452bec32401db6452bec32001d68 | nodejs:6  | cold | 32ms | success | guest/increment:0.0.1
+| 2019-03-16 20:02:59 | 097250ad10a24e1eb250ad10a23e1e96 | nodejs:6 | warm | 2ms | success | guest/tripleAndIncrement:0.0.1 |
+| 2019-03-16 20:02:58 | 4991a50ed9ed4dc091a50ed9edddc0bb | nodejs:6 | cold | 33ms | success | guest/triple:0.0.1 |
+| 2019-03-16 20:02:57 | aee63124f3504aefa63124f3506aef8b | nodejs:6 | cold | 34ms | success | guest/tripleAndIncrement:0.0.1
+| 2019-03-16 20:02:57 | 22da217c8e3a4b799a217c8e3a0b79c4 | sequence | warm | 3.46s | success | guest/tripleAndIncrement:0.0.1
 </pre>
 
-The meaning of the different columns in the list are:
+Here's the meaning of each column in the list:
 
 | Column | Description |
 | :--- | :--- |
 | `Datetime` | The date and time when the invocation occurred. |
-| `Activation ID` | An activation ID that can be used to retrive the result using the `wsk activation get`, `wsk activation result` and `wsk activation logs` commands. |
+| `Activation ID` | An activation ID that can be used to retrive the result using the `nim activation get`, `nim activation result` and `nim activation logs` commands. |
 | `Kind` | The runtime or action type |
 | `Start` | An indication of the latency, i.e. if the runtime container was cold or warm started. |
 | `Duration` | Time taken to execute the invocation. |
 | `Status` | The outcome of the invocation. For an explanation of the various statuses, see the description of the `statusCode` below. |
 | `Entity` | The fully qualified name of entity that was invoked. |
 
-#### Understanding the activation record
+#### The activation record
 
-Each action invocation results in an activation record which contains the following fields:
+Each invocation of an action results in an activation record, which contains the following fields:
 
 - `activationId`: The activation ID.
 - `namespace` and `name`: The namespace and name of the entity.
@@ -258,10 +228,9 @@ Each action invocation results in an activation record which contains the follow
   - `success`: Is *true* if and only if the status is *"success"*.
   - `result`: A dictionary as a JSON object which contains the activation result. If the activation was successful, this contains the value that is returned by the action. If the activation was unsuccessful, `result` contains the `error` key, generally with an explanation of the failure.
 
-### Creating and updating your own action
+### Create and update your own action
 
-Earlier we saved the code from the `greeting` action locally. We can use it to create our own version of the action
-in our own namespace.
+Earlier we saved the code from the `greeting` action locally. We can use it to create our own version of the actionin our own namespace.
 ```
 wsk action create greeting greeting.js
 ok: created action greeting
