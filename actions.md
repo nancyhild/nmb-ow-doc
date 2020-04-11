@@ -2,29 +2,40 @@
 
 Actions are how you create stateless functions that run in the Nimbella Cloud. In general, an action is invoked in response to an event and produces some observable output. For example, an action can be used to detect the faces in an image, respond to a database change, respond to an API call, or post a Tweet.
 
+In this article we'll show you the basics of working with actions in the Nimbella Cloud. We'll show you the basic project structure that the Nimbella deployer uses to deploy projects with no extra configuration. There are many variations on that project structure to accommodate multiple packages, no package, multiple actions within a directory, multiple action directories. As projects grow more complicated you can exert more finely tuned control by adding project configuration.
+
+Project directory structure and configuration are described in detail the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure). To create and deploy projects yourself, you'll need to install the `nim` desktop client, as described in that guide. With `nim` installed, you can deploy Nimbella projects to the Cloud from your local desktop or from GitHub.
+
+## Action basics
+
 An action can be created in any of the following ways:
 
 * From a function, programmed using a number of [supported languages and runtimes](#languages-and-runtimes)
 * From a binary-compatible executable
 * From executables packaged as Docker containers.
 
-The Nimbella Command Line Interface (CLI) called [`nim`](LINK) makes it easy to create and invoke actions.
+The `nim` CLI operations to create, invoke, and manage actions are the same regardless of the actual function code.
 
-The `nim` operations to create, invoke, and manage actions are the same regardless of the actual function code.
-
-## Action basics
+### Source code functions and actions
 
 To use a function as an action, it must conform to the following requirements:
 
 - The function accepts a dictionary as input and produces a dictionary as output.
 
-  The input and output dictionaries are key-value pairs, where the key is a string and the value is any valid JSON value. The dictionaries are canonically represented as JSON objects when interfacing to an action via the REST API or the `wsk` CLI.
+  The input and output dictionaries are key-value pairs, where the key is a string and the value is any valid JSON value. The dictionaries are canonically represented as JSON objects when interfacing to an action via the REST API or the `nim` CLI.
 
 - The function must be called `main` or otherwise must be explicitly exported to identify it as the entry point.
 
   The mechanics may vary depending on your choice of language, but in general the entry point can be specified using the `--main` flag in `nim` commands.
 
-## Create an action
+Note the following additional considerations:
+
+- Functions should be stateless, or *idempotent*. While the system does not enforce this property, there is no guarantee that any state maintained by an action will be available across invocations. In some cases, deliberately leaking state across invocations may be advantageous for performance, but also exposes some risks.
+- Functions should follow best practices to reduce vulnerabilities by treating input as untrusted, and be aware of vulnerabilities they may inherit from third-party dependencies.
+
+## Create a Nimbella project with an action
+
+**[[NH I just noticed we have no examples of `nim action create` either here or in the CLI guide.]]**
 
 Actions are contained within Nimbella projects that you create, and they are identified by fully qualified names that generally take the following form:
 
@@ -32,13 +43,15 @@ Actions are contained within Nimbella projects that you create, and they are ide
 package-name/action-name
 ```
 
-A Nimbella project with actions contains a _packages_ directory, with subdirectory representing the name of the package.
+A Nimbella project with actions contains a _packages_ directory, with a subdirectory representing the name of the package.
 
 For example, here's a project called `example1`, which contains a package named `demo` and an action named `hello`:
 
 ![](assets/actions-9faf988d.svg)
 
 The fully qualified action name is `demo/hello`.
+
+**Tip: **If you want an action to have a simple name (no package qualification), put it in a package directory called _default_. In that case, no package qualifier is prepended.
 
 In this example, the action is a JavaScript function, indicated by the `.js` extension, and it runs using a [Node.js](http://nodejs.org/) runtime.
 
@@ -78,14 +91,6 @@ The colon is optional, so this form is also acceptable:
 nim action invoke ACTIONNAME
 ```
 
->**Tip for OpenWhisk developers:**
-
-  >The `nim action invoke` command has somewhat different parameters than the `wsk action invoke` command:
-
->  * `nim action invoke` with no parameters is equivalent to `wsk action invoke --result` (or `-r`)
->  * `nim action invoke --full` (or `-f` for short) is equivalent to `wsk action invoke --blocking` (or `-b` for short)
->  * `nim action invoke --no-wait` (or `-n` for short) is equivalent to `wsk action invoke`
-
 For the `example1` project, the exact command is:
 
 ```
@@ -100,10 +105,16 @@ This command prints the following result to the terminal:
 }
 ```
 
-## Pass parameters to actions
+>**Tips for OpenWhisk developers:**
+The `nim action invoke` command has somewhat different parameters than the `wsk action invoke` command:
+* `nim action invoke` with no parameters is equivalent to `wsk action invoke --result` (or `-r`)
+* `nim action invoke --full` (or `-f` for short) is equivalent to `wsk action invoke --blocking` (or `-b` for short)
+* `nim action invoke --no-wait` (or `-n` for short) is equivalent to `wsk action invoke`
+>
 
-Sometimes it's necessary or just convenient to provide values for function parameters. They can serve as defaults or as a way of reusing an action but with different parameters. Parameters can be bound to an action
-and unless overridden later by an invocation, they provide the specified value to the function.
+### Pass parameters to actions
+
+Sometimes it's necessary or just convenient to provide values for function parameters. They can serve as defaults or as a way of reusing an action but with different parameters.
 
 Actions receive parameters as input with the following flag:
 
@@ -113,12 +124,12 @@ Actions receive parameters as input with the following flag:
 
 where `key` is the property name and `value` is any valid JSON value.
 
-The `demo/hello` action accepts two optional input arguments, which are used to tailor the response, so the default output greeting is "Hello, stranger from somewhere!". Let's replace the words "stranger" and "somewhere" by specifying the following parameters:
+The default output greeting in the `example1` project is "Hello, stranger from somewhere!" The `demo/hello` action accepts two optional input arguments, `name` and `place`, which can be used to tailor the response. Let's replace the words "stranger" and "somewhere" by specifying the following parameters:
 
-* `name`, whose value will replace the word "stranger"
-* `place`, whose value will replace the word "somewhere"
+* `name` with the value `"Dorothy"`
+* `place` with the value `"somewhere"`
 
-Here's how these parameters look in the `nim action invoke` command:
+Here's how these parameters look in the `nim action invoke` command and its output:
 
 ```
 nim action invoke /demo/hello --param name Dorothy --param place Kansas
@@ -127,61 +138,63 @@ nim action invoke /demo/hello --param name Dorothy --param place Kansas
 }
 ```
 
-<----------- **[[NH: I'd like to delete the following section. It seems to repeat what was in this previous 'parameters' section. Also I don't see any `action update` command in `nim`.]]**
-### Binding parameters to actions
+### Bind parameters to actions
 
-Sometimes it's necessary or just convenient to provide values for function parameters. They can serve as defaults or as a way of reusing an action but with different parameters. Parameters can be bound to an action
-and unless overridden later by an invocation, they provide the specified value to the function.
+You can bind parameters to an action and, unless overridden later by an invocation, they provide the specified value to the function.
 
 Here's an example.
 
+**Invoke the action to see the default values:**
 ```
-wsk action invoke demo/hello
+nim action invoke demo/hello
 {
   "msg": "Hello, stranger from somewhere!"
 }
 ```
+
+**Use `nim action update` to bind a new value for the `name` property to the action:**
 ```
-wsk action update demo/hello --param name Toto
-ok: updated action greeting
+nim action update demo/hello --param name Toto
+ok: updated action demo/hello
 ```
+
+**Invoke the action to test the new value:**
 ```
-wsk action invoke demo/hello
+nim action invoke demo/hello
 {
   "msg": "Hello, Toto from somewhere!"
 }
 ```
 
-You can still provide additional parameters, as in the `place`:
+You can provide additional parameters and the `name` parameter stays bound. Here's an example of using the --param flag for `place` when the `name` parameter has already been bound.
+
 ```
-wsk action invoke demo/hello  --param place Kansas
+nim action invoke demo/hello --param place Kansas
 {
   "msg": "Hello, Toto from Kansas!"
 }
 ```
-and even override the `name`:
+
+You can override the bound parameter in any `nim action invoke` command:
+
 ```
-wsk action invoke greeting --param place Kansas --param name Dorothy
+nim action invoke demo/hello --param place Kansas --param name Dorothy
 {
   "msg": "Hello, Dorothy from Kansas!"
 }
 ```
------------->
-
-
 
 ## Action execution
 
 When an invocation request is received, the system records the request and dispatches an activation.
 
+The system attempts to invoke the action once and records the `status` in the [activation record](#the-activation-record). Every invocation that is successfully received that the user might be billed for gets an activation record. See the section on [the activation record](#the-activation-record) for more details.
 
-The system attempts to invoke the action once and records the `status` in the [activation record](#the-activation-record). Every invocation that is successfully received, and that the user might be billed for, will eventually have an activation record. See the section on [the activation record](#the-activation-record) for more details.
-
-**Note:** If there's a network failure or other failure which intervenes before you receive an HTTP response, it's possible that `nim` received and processed the request. Check the activation record.
+**Note:** If there's a network failure or other failure that intervenes before you receive an HTTP response, it's possible that `nim` received and processed the request. Check the activation record.
 
 ### System return from an invocation request
 
-What the system returns from an invocation request depends on whether the invocation is synchronous or asynchronous.
+What the system returns from an invocation request depends on whether it's synchronous or asynchronous.
 
 #### Synchronous requests
 
@@ -189,7 +202,7 @@ By default, the `nim action invoke` command is synchronous, meaning it waits for
 
 The wait period for a blocking invocation request is the lesser of 60 seconds (the default for blocking invocations) or a configured timeout. If the time limit is exceeded, the activation continues processing in the system and an activation ID is returned so that you can check for the result later, the same as the result for asynchronous (nonblocking) requests.
 
-When an action exceeds its configured time limit, [an error is recorded in the activation record](#the-activation-record).
+If an action exceeds its configured time limit, [an error is recorded in the activation record](#the-activation-record).
 
 #### Asynchronous requests
 
@@ -203,7 +216,7 @@ To run a `nim` command asynchronously, use the `--no-wait` parameter, or `-n` fo
 
 **Tip:** If you're an OpenWhisk developer, you'll notice that the `wsk action invoke` is asynchronous by default, wherease the `nim action invoke` command is synchronous by default.
 
-#### The activation record
+### The activation record
 
 Each invocation of an action results in an activation record, which contains the following fields:
 
@@ -221,7 +234,7 @@ Each invocation of an action results in an activation record, which contains the
       - the action exceeded its time limit during the init or run phase
       - the action specified a wrong docker container name
       - the action did not properly implement the expected [runtime protocol](actions-new.md)
-    - *"whisk internal error"*: the system was unable to invoke the action.
+    - *"whisk internal error"*: the system was unable to invoke the action. **[[NH: is 'whisk' ok here? Note also in table below]]**
   - `statusCode`: A value between 0 and 3 that maps to the activation result, as described by the *status* field:
 
     | statusCode | status                 |
@@ -233,18 +246,18 @@ Each invocation of an action results in an activation record, which contains the
   - `success`: Is *true* if and only if the status is *"success"*.
   - `result`: A dictionary as a JSON object which contains the activation result. If the activation was successful, this contains the value that is returned by the action. If the activation was unsuccessful, `result` contains the `error` key, generally with an explanation of the failure.
 
-### Working with `nim action activation` commands
+### View the activation record
 
-Here are some common `nim` commands for viewing all or parts of the activation record.
+Here are some common `nim activation` commands for viewing all or parts of the activation record.
 
 <------ **[[NH: I found this line in the CLI guide but am not sure it applies here.]]
-**Note:** The `nim` command supports the `activation` command when used individually, but not as part of a project.  ------------>
+**Note:** The `nim activation` command is supported when used individually but not as part of a project.  ------------>
 
-- `nim activation list`: lists all activations. See the next section for a detailed description.
+- `nim activation list`: lists all activations. See the next section for a list of flags for this command.
 - `nim activation get --last`: retrieves the most recent activation record
 - `nim activation result <activationId>`: retrieves only the result of the activation (or use `--last` to get the most recent result).
 - `nim activation logs <activationId>`: retrieves only the logs of the activation.
-- `wsk activation logs <activationId> --strip`: strips metadata from each log line so the logs are easier to read.
+- `nim activation logs <activationId> --strip`: strips metadata from each log line so the logs are easier to read.
 
 #### `nim activation list` command flags
 
@@ -258,7 +271,7 @@ The `nim activation list` command lists all activations or activations filtered 
 | `--skip SKIP` | `-s` | exclude the first SKIP number of activations from the result |
 | `--upto UPTO` | | Return activations with timestamps earlier than UPTO; measured in milliseconds since Th, 01, Jan 1970 |
 
-#### `nim activation list` example
+#### `nim activation list` example output
 
 List the last six activations:
 
@@ -288,122 +301,24 @@ Here's the meaning of each column in the list:
 | `Status` | The outcome of the invocation. For an explanation of the various statuses, see the description of the `statusCode` below. |
 | `Entity` | The fully qualified name of entity that was invoked. |
 
-
-<------ **[[NH: Not sure this following section is necessary or if this is the right location for it.]]**
-## Create and update your own actions
-
-You've seen the basic project structure for an action. There are many variations on project structure that the Nimbella deployer recognizes: multiple packages, no package, multiple actions within a directory, multiple action directories. Project directory structure and configuration is described in detail the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure).
-
-You'll need to install the `nim` desktop client, as described in that guide. With `nim` installed, you can deploy Nimbella projects to the Cloud from your local desktop or from GitHub.  -------->
-
-
-### Further considerations for creating actions
-
-- Functions should be stateless, or *idempotent*. While the system does not enforce this property, there is no guarantee that any state maintained by an action will be available across invocations. In some cases, deliberately leaking state across invocations may be advantageous for performance, but also exposes some risks.
+## Further considerations for creating actions
 
 - An action executes in a sandboxed environment, namely a container. At any given time, a single activation will execute inside the container. Subsequent invocations of the same action may reuse a previous container, and there may exist more than one container at any given time, each having its own state.
-
 - Invocations of an action are not ordered. If the user invokes an action twice from the command line or the REST API, the second invocation might run before the first. If the actions have side effects, they might be observed in any order.
-
-- There is no guarantee that actions will execute atomically. Two actions can run concurrently and their side effects can be interleaved. OpenWhisk does not ensure any particular concurrent consistency model for side effects. Any concurrency side effects will be implementation-dependent.
-
+- There is no guarantee that actions will execute atomically. Two actions can run concurrently and their side effects can be interleaved. `nim` does not ensure any particular concurrent consistency model for side effects. Any concurrency side effects will be implementation-dependent.
 - Actions have two phases: an initialization phase, and a run phase. During initialization, the function is loaded and prepared for execution. The run phase receives the action parameters provided at invocation time. Initialization is skipped if an action is dispatched to a previously initialized container. This is referred to as a _warm start_. You can tell if an [invocation was a warm activation or a cold one requiring initialization](annotations.md#annotations-specific-to-activations) by inspecting the activation record.
-
 - An action runs for a bounded amount of time. This limit can be configured per action, and applies to both the initialization and the execution separately. If the action time limit is exceeded during the initialization or run phase, the activation's response status is _action developer error_.
 
-- Functions should follow best practices to reduce [vulnerabilities](security.md) by treating input as untrusted, and be aware of vulnerabilities they may inherit from third-party dependencies.
+## Other action commands
 
-## Creating action sequences
+### Get metadata for actions
 
-A powerful feature of the OpenWhisk programming model is the ability to compose actions together. A common composition is a sequence of actions, where the result of one action becomes the input to the next action in the sequence.
+Metadata that describes existing actions can be retrieved via the `nim action get` command.
 
-Here we will use several utility actions that are provided in the `/whisk.system/utils` [package](packages.md) to create your first sequence.
-
-1. Display the actions in the `/whisk.system/utils` package.
-
-  ```
-  wsk package get --summary /whisk.system/utils
-  ```
-  ```
-  package /whisk.system/utils: Building blocks that format and assemble data
-     (parameters: none defined)
-   action /whisk.system/utils/split: Split a string into an array
-     (parameters: payload, separator)
-   action /whisk.system/utils/sort: Sorts an array
-     (parameters: lines)
-   ...
-  ```
-
-  You will be using the `split` and `sort` actions in this example shown here, although the package contains more actions.
-
-2. Create an action sequence so that the result of one action is passed as an argument to the next action.
-
-  ```
-  wsk action create mySequence --sequence /whisk.system/utils/split,/whisk.system/utils/sort
-  ```
-
-  This action sequence converts some lines of text to an array, and sorts the lines.
-
-3. Invoke the action:
-
-  ```
-  wsk action invoke --result mySequence --param payload "Over-ripe sushi,\nThe Master\nIs full of regret."
-  ```
-  ```json
-  {
-      "length": 3,
-      "lines": [
-          "Is full of regret.",
-          "Over-ripe sushi,",
-          "The Master"
-      ]
-  }
-  ```
-
-  In the result, you see that the lines are sorted.
-
-**Note**: Parameters passed between actions in the sequence are explicit, except for default parameters. Therefore parameters that are passed to the sequence action (e.g., `mySequence`) are only available to the first action in the sequence. The result of the first action in the sequence becomes the input JSON object to the second action in the sequence (and so on). This object does not include any of the parameters originally passed to the sequence unless the first action explicitly includes them in its result. Input parameters to an action are merged with the action's default parameters, with the former taking precedence and overriding any matching default parameters.
-
-For more information about invoking action sequences with multiple named parameters, learn about [setting default parameters](parameters.md#setting-default-parameters).
-
-A more advanced form of composition using *conductor* actions is described [here](conductors.md).
-
-## Watching action output
-
-OpenWhisk actions might be invoked by other users, in response to various events, or as part of an action sequence. In such cases it can be useful to monitor the invocations.
-
-You can use the OpenWhisk CLI to watch the output of actions as they are invoked.
-
-1. Issue the following command from a shell:
+**[[NH: check output, looks like the original had no package so my command is wrong?]]**
 ```
-wsk activation poll
-```
-
-This command starts a polling loop that continuously checks for logs from activations.
-
-2. Switch to another window and invoke an action:
-
-```
-wsk action invoke /whisk.system/samples/helloWorld --param payload Bob
-ok: invoked /whisk.system/samples/helloWorld with id 7331f9b9e2044d85afd219b12c0f1491
-```
-
-3. Observe the activation log in the polling window:
-
-```
-Activation: helloWorld (7331f9b9e2044d85afd219b12c0f1491)
-  2016-02-11T16:46:56.842065025Z stdout: hello bob!
-```
-
-Similarly, whenever you run the poll utility, you see in real time the logs for any actions running on your behalf in OpenWhisk.
-
-## Getting actions
-
-Metadata that describes existing actions can be retrieved via the `wsk action get` command.
-
-```
-wsk action get hello
-ok: got action hello
+nim action get demo/hello
+ok: got action demo/hello
 {
     "namespace": "guest",
     "name": "hello",
@@ -427,146 +342,177 @@ ok: got action hello
 }
 ```
 
-### Getting the URL for an action
+### Get the URL for an action
 
 An action can be invoked through the REST interface via an HTTPS request.
+
 To get an action URL, execute the following command:
 
 ```
-wsk action get greeting --url
+nim action get demo/hello --url
 ```
 
 A URL with the following format will be returned for standard actions:
 ```
 ok: got action actionName
-https://${APIHOST}/api/v1/namespaces/${NAMESPACE}/actions/greeting
+https://${APIHOST}/api/v1/namespaces/${NAMESPACE}/actions/demo/hello
 ```
 
-Authentication is required when invoking an action via an HTTPS request using this resource path.
-For more information regarding action invocations using the REST interface, see [Using REST APIs with OpenWhisk](rest_api.md#actions).
+**[[NH: check link]]**
+Authentication is required when invoking an action via an HTTPS request using this resource path. For more information regarding action invocations using the REST interface, see [Using REST APIs with OpenWhisk](rest_api.md#actions).
 
-Another way of invoking an action which does not require authentication is via
-[web actions](webactions.md#web-actions).
+**[[NH: check link:]]**
+Another way of invoking an action that does not require authentication is via [web actions](webactions.md#web-actions).
 
-Any action may be exposed as a web action, using the `--web true` command line option at action
-creation time (or later when updating the action).
+Any action may be exposed as a web action, using the `--web true` command line option when creating or updating an action.
 
 ```
-wsk action update greeting --web true
-ok: updated action greeting
+nim action update demo/hello --web true
+ok: updated action demo/hello
 ```
 
 The resource URL for a web action is different:
 ```
-wsk action get greeting --url
-ok: got action greeting
-https://${APIHOST}/api/v1/web/${NAMESPACE}/${PACKAGE}/greeting
+nim action get demo/hello --url
+ok: got action demo/hello
+https://${APIHOST}/api/v1/web/${NAMESPACE}/${PACKAGE}/demo/hello
 ```
 
-You can use `curl` or wget to invoke the action.
+You can use `curl` or `wget` to invoke the action.
 ```
-curl `wsk action get greeting --url | tail -1`.json
+curl `nim action get demo/hello --url | tail -1`.json
 {
   "payload": "Hello, Toto from somewhere!"
 }
 ```
 
-### Saving action code
+### Save action code
 
 Code associated with an existing action may be retrieved and saved locally. Saving can be performed on all actions except sequences and docker actions.
 
-1. Save action code to a filename that corresponds with an existing action name in the current working directory. A file extension that corresponds to the action kind is used, or an extension of `.zip` will be used for action code that is a zip file.
+1. Save action code to a filename that corresponds with an existing action name in the current working directory. A file extension that corresponds to the action kind is used. An extension of _.zip_ is used for action code that is a zip file.
+
+  **[[NH: please check command and output:]]**
   ```
-  wsk action get /whisk.system/samples/greeting --save
-  ok: saved action code to /path/to/openwhisk/greeting.js
+  nim action get /example1/packages/demo/hello --save
+  ok: saved action code to /path/to/packages/demo/hello/hello.js
   ```
 
-2. You may provide your own file name and extension as well using the `--save-as` flag.
+2. You can provide your own file name and extension by using the `--save-as` flag.
+
+  **[[NH: check output:]]**
   ```
-  wsk action get /whisk.system/samples/greeting --save-as hello.js
-  ok: saved action code to /path/to/openwhisk/hello.js
+  nim action get /example1/packages/demo/hello --save-as hellogreeting.js
+  ok: saved action code to /path/to/packages/demo/hello/hellogreeting.js
   ```
 
-## Listing actions
+### List actions
 
-You can list all the actions that you have created using `wsk action list`:
+You can list all the actions that you have created using the following commnand:
 
 ```
-wsk action list
-```
-```
-actions
-/guest/mySequence                  private sequence
-/guest/greeting                    private nodejs:6
+nim action list
+  actions
+  /guest/mySequence                  private sequence
+  /guest/greeting                    private nodejs:6
 ```
 
 Here, we see actions listed in order from most to least recently updated. For easier browsing, you can use the flag `--name-sort` or `-n` to sort the list alphabetically:
 
+**[[NH: Output list seems backwards for alphabetical order?]]**
 ```
-wsk action list --name-sort
+nim action list --name-sort
+  actions
+  /guest/mySequence                  private sequence
+  /guest/greeting                    private nodejs:6
+```
+
+The list is now sorted alphabetically by namespace, then package name if any, and finally action name, with the default package (no specified package) listed at the top. **[[NH: Is namespace listed in this output example? What does output look like if there's a package? Does nim output list the namespace?]]**
+
+**Note**: The printed list is sorted alphabetically after it is received from the platform. Other list flags such as `--limit` and `--skip` are applied to the block of actions before they are received for sorting. To list actions in order by creation time, use the flag `--time`.
+
+To filter your list of actions to just those within a specific package, use this command:
+
+**[[NH: please check command and output:]]**
+```
+nim action list /demo
 ```
 ```
 actions
-/guest/mySequence                  private sequence
-/guest/greeting                    private nodejs:6
+/demo/hello                private nodejs:6
+/demo/hello-followup       private nodejs:6
 ```
 
-Notice that the list is now sorted alphabetically by namespace, then package name if any, and finally action name, with the default package (no specified package) listed at the top.
-
-**Note**: The printed list is sorted alphabetically after it is received from the platform. Other list flags such as `--limit` and `--skip` will be applied to the block of actions before they are received for sorting. To list actions in order by creation time, use the flag `--time`.
-
-As you write more actions, this list gets longer and it can be helpful to group related actions into [packages](packages.md). To filter your list of actions to just those within a specific package, you can use:
-
-```
-wsk action list /whisk.system/utils
-```
-```
-actions
-/whisk.system/utils/hosturl        private nodejs:6
-/whisk.system/utils/namespace      private nodejs:6
-/whisk.system/utils/cat            private nodejs:6
-/whisk.system/utils/smash          private nodejs:6
-/whisk.system/utils/echo           private nodejs:6
-/whisk.system/utils/split          private nodejs:6
-/whisk.system/utils/date           private nodejs:6
-/whisk.system/utils/head           private nodejs:6
-/whisk.system/utils/sort           private nodejs:6
-```
-
-## Deleting actions
+## Delete actions
 
 You can clean up by deleting actions that you do not want to use.
 
 1. Run the following command to delete an action:
   ```
-  wsk action delete greeting
-  ok: deleted greeting
+  nim action delete demo/hello-followup
+  ok: deleted demo/hello-followup
   ```
 
 2. Verify that the action no longer appears in the list of actions.
   ```
-  wsk action list
+  nim action list
   ```
   ```
   actions
-  /guest/mySequence                private sequence
+  /demo/hello                private sequence
+
   ```
 
-## Accessing action metadata within the action body
+**[[NH: Occurs to me it might be helpful to say whether these `nim action` commands work just locally or both locally and deployed.]]**
 
-The action environment contains several properties that are specific to the running action.
-These allow the action to programmatically work with OpenWhisk assets via the REST API,
-or set an internal alarm when the action is about to use up its allotted time budget.
-The properties are accessible via the system environment for all supported runtimes:
-Node.js, Python, Swift, Java and Docker actions when using the OpenWhisk Docker skeleton.
+
+## Access action metadata within the action body
+
+**[[NH: "OpenWhisk assets" in next paragraph ok?]]**
+
+The action environment contains several properties that are specific to the running action. These allow the action to programmatically work with OpenWhisk assets via the REST API or set an internal alarm when the action is about to use up its allotted time budget.
+
+**[[NH: Not sure what to do with these properties--please advise. Also note link to annotations.md]]**
+
+The properties are accessible via the system environment for all supported runtimes: Node.js, Python, Swift, Java and Docker actions.
 
 * `__OW_API_HOST` the API host for the OpenWhisk deployment running this action.
 * `__OW_API_KEY` the API key for the subject invoking the action, this key may be a restricted API key. This property is absent unless explicitly [requested](./annotations.md#annotations-for-all-actions).
-* `__OW_NAMESPACE` the namespace for the _activation_ (this may not be the same as the namespace for the action).
+* `__OW_NAMESPACE` the namespace for the _activation_. This may not be the same as the namespace for the action.
 * `__OW_ACTION_NAME` the fully qualified name of the running action.
 * `__OW_ACTION_VERSION` the internal version number of the running action.
-* `__OW_ACTIVATION_ID` the activation id for this running action instance.
-* `__OW_DEADLINE` the approximate time when this action will have consumed its entire duration quota (measured in epoch milliseconds).
+* `__OW_ACTIVATION_ID` the activation ID for this running action instance.
+* `__OW_DEADLINE` the approximate time for this action to consume its entire duration quota (measured in epoch milliseconds).
+
+###Watch action output
+
+`nim` actions might be invoked by other users in response to various events. In such cases it can be useful to monitor the invocations.
+
+You can use the `nim` CLI to watch the output of actions as they are invoked.
+
+1. Issue the following command from a shell:
+```
+nim activation poll
+```
+
+This command starts a polling loop that continuously checks for logs from activations.
+
+2. Switch to another window and invoke an action:
+
+**[[NH: check command output:]]**
+```
+nim action invoke /demo/hello
+ok: invoked /whisk.system/samples/helloWorld with id 7331f9b9e2044d85afd219b12c0f1491
+```
+
+3. Observe the activation log in the polling window:
+**[[NH: check output:]]**
+```
+Activation: helloWorld (7331f9b9e2044d85afd219b12c0f1491)
+  2016-02-11T16:46:56.842065025Z stdout: hello bob!
+```
+
+Similarly, whenever you run the poll utility, you see in real time the logs for any actions running on your behalf.
 
 ## Languages and Runtimes
 Here are languages and runtimes supported in the Nimbella Cloud.
@@ -585,15 +531,16 @@ Here are languages and runtimes supported in the Nimbella Cloud.
 * [.NET Core](actions-dotnet.md)
 * [Docker and native binaries](actions-docker.md)
 
----->Multiple actions from different languages may be composed together to create a longer processing pipeline called a [sequence](#creating-action-sequences). The polyglot nature of the composition is powerful in that it affords you the ability to use the right language for the problem you're solving, and separates the orchestration of the dataflow between functions from the choice of language. A more advanced form of composition is described [here](conductors.md).<----
+<---- **[[NH: Delete this paragraph? I deleted the 'action sequences' section.]]**
+Multiple actions from different languages may be composed together to create a longer processing pipeline called a [sequence](#creating-action-sequences). The polyglot nature of the composition is powerful in that it affords you the ability to use the right language for the problem you're solving, and separates the orchestration of the dataflow between functions from the choice of language. A more advanced form of composition is described [here](conductors.md).---->
 
 ### Supported runtimes
 
 The Nimbella deployer determines the kind of runtime required for the action from the file suffix. The following runtimes are supported:
 
-Node.js for suffix .js
-Python for suffix .py
-Java for suffixes .java and .jar
-Swift suffix .swift
-PHP for suffix .php
-Go for suffix .go
+* Node.js for suffix .js
+* Python for suffix .py
+* Java for suffixes .java and .jar
+* Swift suffix .swift
+* PHP for suffix .php
+* Go for suffix .go
