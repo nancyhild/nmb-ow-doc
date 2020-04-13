@@ -2,19 +2,51 @@
 
 Actions are how you create stateless functions that run in the Nimbella Cloud. In general, an action is invoked in response to an event and produces some observable output. For example, an action can be used to detect the faces in an image, respond to a database change, respond to an API call, or post a Tweet.
 
-In this article we'll show you the basics of working with actions in the Nimbella Cloud. We'll show you the basic project structure that the Nimbella deployer uses to deploy projects with no extra configuration. There are many variations on that project structure to accommodate multiple packages, no package, multiple actions within a directory, multiple action directories. As projects grow more complicated you can exert more finely tuned control by adding project configuration.
+The preferred Nimbella development process is to create and deploy actions in the context of a Nimbella project. The project scales gracefully as more actions and web content are added, while keeping deployed actions in sync with the source. Nimbella Cloud projects are described in detail the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure).
 
-Project directory structure and configuration are described in detail the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure). To create and deploy projects yourself, you'll need to install the `nim` desktop client, as described in that guide. With `nim` installed, you can deploy Nimbella projects to the Cloud from your local desktop or from GitHub.
+In this document, we'll focus on what single actions do and how they function, and we'll provide specific commands for accomplishing tasks related to actions.
 
 ## Action basics
 
 An action can be created in any of the following ways:
 
-* From a function, programmed using a number of [supported languages and runtimes](#languages-and-runtimes)
+* From a function, programmed using a number of [supported languages
 * From a binary-compatible executable
 * From executables packaged as Docker containers.
 
+Actions abstract away from the source languages in which the functions are written. Multiple actions from different languages may be composed together to create a longer processing pipeline called a [sequence](#creating-action-sequences). The polyglot nature of the composition is powerful in that it affords you the ability to use the right language for the problem you're solving, and separates the orchestration of the dataflow between functions from the choice of language. A more advanced form of composition is described [in this OpenWhisk document](https://github.com/apache/openwhisk/blob/master/docs/conductors.md).
+
 The `nim` CLI operations to create, invoke, and manage actions are the same regardless of the actual function code.
+
+### Supported Languages and Runtimes
+Here are languages and runtimes supported in the Nimbella Cloud, with links to more complete OpenWhisk tutorials for each language. We recommend reading the basics in this document first, which are language agnostic, before getting deeper into a language-specific tutorial. If your preferred language isn't supported directly, the Docker action or native binary paths may be more suitable.
+
+**Supported languages**
+
+* [Ballerina](actions-ballerina.md)
+* [Go](actions-go.md)
+* [Java](actions-java.md)
+* [JavaScript](actions-nodejs.md)
+* [PHP](actions-php.md)
+* [Python](actions-python.md)
+* [Ruby](actions-ruby.md)
+* [Rust](actions-rust.md)
+* [Swift](actions-swift.md)
+* [.NET Core](actions-dotnet.md)
+* [Docker and native binaries](actions-docker.md)
+
+**Supported runtimes**
+
+The Nimbella deployer determines the kind of runtime required for the action from the file suffix. The following runtimes are supported:
+
+* Node.js for suffix .js
+* Python for suffix .py
+* Java for suffixes .java and .jar
+* Swift suffix .swift
+* PHP for suffix .php
+* Go for suffix .go
+
+As an alternative, you can [create your own runtime](https://github.com/apache/openwhisk/blob/master/docs/actions-new.md).
 
 ### Source code functions and actions
 
@@ -33,29 +65,10 @@ Note the following additional considerations:
 - Functions should be stateless, or *idempotent*. While the system does not enforce this property, there is no guarantee that any state maintained by an action will be available across invocations. In some cases, deliberately leaking state across invocations may be advantageous for performance, but also exposes some risks.
 - Functions should follow best practices to reduce vulnerabilities by treating input as untrusted, and be aware of vulnerabilities they may inherit from third-party dependencies.
 
-## Create a Nimbella project with an action
 
-**[[NH I just noticed we have no examples of `nim action create` either here or in the CLI guide.]]**
+## Create an action
 
-Actions are contained within Nimbella projects that you create, and they are identified by fully qualified names that generally take the following form:
-
-```
-package-name/action-name
-```
-
-A Nimbella project with actions contains a _packages_ directory, with a subdirectory representing the name of the package.
-
-For example, here's a project called `example1`, which contains a package named `demo` and an action named `hello`:
-
-![](assets/actions-9faf988d.svg)
-
-The fully qualified action name is `demo/hello`.
-
-**Tip: **If you want an action to have a simple name (no package qualification), put it in a package directory called _default_. In that case, no package qualifier is prepended.
-
-In this example, the action is a JavaScript function, indicated by the `.js` extension, and it runs using a [Node.js](http://nodejs.org/) runtime.
-
-Here are the JavaScript contents of the file `hello.js`. It's a short function that accepts optional parameters and returns a standard greeting.
+Let's start with an example function called `greeting.js`, written in JavaScript. It's a short function that accepts optional parameters and returns a standard greeting. It runs using a [Node.js](http://nodejs.org/) runtime.
 
 ```js
 /**
@@ -76,10 +89,25 @@ function main(params) {
   return {msg:  'Hello, ' + name + ' from ' + place + '!'};
 }
 ```
+## Create and update an action
+
+You use this example function to create your own version of the action in your own namespace:
+
+```
+nim action create greeting greeting.js
+ok: created action greeting
+```
+
+For convenience, you can omit the namespace when working with actions that belong to you. Also if there is no package, use the action name without a package name. If you modify the code and want to update the action, use `nim action update`:
+
+nim action update greeting greeting.js
+ok: updated action greeting
+
+The `nim action create` and `nim action update` commands are the same in terms of their command-like parameters.
 
 ## Invoke an action
 
-Here's the `nim` command to invoke an action:
+Here's the command to invoke an action:
 
 ```
 nim action:invoke ACTIONNAME
@@ -91,10 +119,10 @@ The colon is optional, so this form is also acceptable:
 nim action invoke ACTIONNAME
 ```
 
-For the `example1` project, the exact command is:
+For our example, the exact command is:
 
 ```
-nim action invoke demo/hello
+nim action invoke greeting
 ```
 
 This command prints the following result to the terminal:
@@ -124,15 +152,15 @@ Actions receive parameters as input with the following flag:
 
 where `key` is the property name and `value` is any valid JSON value.
 
-The default output greeting in the `example1` project is "Hello, stranger from somewhere!" The `demo/hello` action accepts two optional input arguments, `name` and `place`, which can be used to tailor the response. Let's replace the words "stranger" and "somewhere" by specifying the following parameters:
+The default output greeting from the `greeting` action is "Hello, stranger from somewhere!" This action accepts two optional input arguments, `name` and `place`, which can be used to tailor the response. Let's replace the words "stranger" and "somewhere" by passing parameters with different values:
 
-* `name` with the value `"Dorothy"`
-* `place` with the value `"somewhere"`
+* `name`, with the value `"Dorothy"`
+* `place`, with the value `"Kansas"`
 
 Here's how these parameters look in the `nim action invoke` command and its output:
 
 ```
-nim action invoke /demo/hello --param name Dorothy --param place Kansas
+nim action invoke /greeting --param name Dorothy --param place Kansas
 {
   "msg": "Hello, Dorothy from Kansas!"
 }
@@ -146,30 +174,30 @@ Here's an example.
 
 **Invoke the action to see the default values:**
 ```
-nim action invoke demo/hello
+nim action invoke greeting
 {
   "msg": "Hello, stranger from somewhere!"
 }
 ```
 
-**Use `nim action update` to bind a new value for the `name` property to the action:**
+**Use `nim action update` to bind a new value for the `name` property:**
 ```
-nim action update demo/hello --param name Toto
-ok: updated action demo/hello
+nim action update greeting --param name Toto
+ok: updated action greeting
 ```
 
 **Invoke the action to test the new value:**
 ```
-nim action invoke demo/hello
+nim action invoke greeting
 {
   "msg": "Hello, Toto from somewhere!"
 }
 ```
 
-You can provide additional parameters and the `name` parameter stays bound. Here's an example of using the --param flag for `place` when the `name` parameter has already been bound.
+Here's an example of using the --param flag for `place` when the `name` parameter has already been bound.
 
 ```
-nim action invoke demo/hello --param place Kansas
+nim action invoke greeting --param place Kansas
 {
   "msg": "Hello, Toto from Kansas!"
 }
@@ -178,7 +206,7 @@ nim action invoke demo/hello --param place Kansas
 You can override the bound parameter in any `nim action invoke` command:
 
 ```
-nim action invoke demo/hello --param place Kansas --param name Dorothy
+nim action invoke greeting --param place Kansas --param name Dorothy
 {
   "msg": "Hello, Dorothy from Kansas!"
 }
@@ -208,10 +236,10 @@ If an action exceeds its configured time limit, [an error is recorded in the act
 
 In contrast, when the activation request is asynchronous, the HTTP request terminates once the system has accepted the request to invoke an action. With an asynchronous request, the system returns an activation ID to confirm that the invocation was received. You can use this ID to retrieve the activation record.
 
-To run a `nim` command asynchronously, use the `--no-wait` parameter, or `-n` for short, as in this command for the `example1` project to invoke the `demo/hello` action:
+To run a `nim` command asynchronously, use the `--no-wait` parameter, or `-n` for short, as in this command to invoke the `greeting` action:
 
  ```
- nim action invoke demo/hello --no-wait
+ nim action invoke greeting --no-wait
 ```
 
 **Tip:** If you're an OpenWhisk developer, you'll notice that the `wsk action invoke` is asynchronous by default, wherease the `nim action invoke` command is synchronous by default.
@@ -249,9 +277,6 @@ Each invocation of an action results in an activation record, which contains the
 ### View the activation record
 
 Here are some common `nim activation` commands for viewing all or parts of the activation record.
-
-<------ **[[NH: I found this line in the CLI guide but am not sure it applies here.]]
-**Note:** The `nim activation` command is supported when used individually but not as part of a project.  ------------>
 
 - `nim activation list`: lists all activations. See the next section for a list of flags for this command.
 - `nim activation get --last`: retrieves the most recent activation record
@@ -317,8 +342,8 @@ Metadata that describes existing actions can be retrieved via the `nim action ge
 
 **[[NH: check output, looks like the original had no package so my command is wrong?]]**
 ```
-nim action get demo/hello
-ok: got action demo/hello
+nim action get greeting
+ok: got action greeting
 {
     "namespace": "guest",
     "name": "hello",
@@ -349,13 +374,13 @@ An action can be invoked through the REST interface via an HTTPS request.
 To get an action URL, execute the following command:
 
 ```
-nim action get demo/hello --url
+nim action get greeting --url
 ```
 
 A URL with the following format will be returned for standard actions:
 ```
 ok: got action actionName
-https://${APIHOST}/api/v1/namespaces/${NAMESPACE}/actions/demo/hello
+https://${APIHOST}/api/v1/namespaces/${NAMESPACE}/actions/greeting
 ```
 
 **[[NH: check link]]**
@@ -367,20 +392,20 @@ Another way of invoking an action that does not require authentication is via [w
 Any action may be exposed as a web action, using the `--web true` command line option when creating or updating an action.
 
 ```
-nim action update demo/hello --web true
-ok: updated action demo/hello
+nim action update greeting --web true
+ok: updated action greeting
 ```
 
 The resource URL for a web action is different:
 ```
-nim action get demo/hello --url
-ok: got action demo/hello
-https://${APIHOST}/api/v1/web/${NAMESPACE}/${PACKAGE}/demo/hello
+nim action get greeting --url
+ok: got action greeting
+https://${APIHOST}/api/v1/web/${NAMESPACE}/${PACKAGE}/greeting
 ```
 
 You can use `curl` or `wget` to invoke the action.
 ```
-curl `nim action get demo/hello --url | tail -1`.json
+curl `nim action get greeting --url | tail -1`.json
 {
   "payload": "Hello, Toto from somewhere!"
 }
@@ -394,16 +419,16 @@ Code associated with an existing action may be retrieved and saved locally. Savi
 
   **[[NH: please check command and output:]]**
   ```
-  nim action get /example1/packages/demo/hello --save
-  ok: saved action code to /path/to/packages/demo/hello/hello.js
+  nim action get /whisk-system/samples/greeting --save
+  ok: saved action code to /path/to/namespace/greeting.js
   ```
 
 2. You can provide your own file name and extension by using the `--save-as` flag.
 
   **[[NH: check output:]]**
   ```
-  nim action get /example1/packages/demo/hello --save-as hellogreeting.js
-  ok: saved action code to /path/to/packages/demo/hello/hellogreeting.js
+  wsk action get /whisk-system/samples/greeting --save-as hello.js
+  ok: saved action code to /path/to/namespace/hello.js
   ```
 
 ### List actions
@@ -435,12 +460,19 @@ To filter your list of actions to just those within a specific package, use this
 
 **[[NH: please check command and output:]]**
 ```
-nim action list /demo
+him action list /whisk-system/utils
 ```
 ```
 actions
-/demo/hello                private nodejs:6
-/demo/hello-followup       private nodejs:6
+/whisk-system/utils/hosturl        private nodejs:6
+/whisk-system/utils/namespace      private nodejs:6
+/whisk-system/utils/cat            private nodejs:6
+/whisk-system/utils/smash          private nodejs:6
+/whisk-system/utils/echo           private nodejs:6
+/whisk-system/utils/split          private nodejs:6
+/whisk-system/utils/date           private nodejs:6
+/whisk-system/utils/head           private nodejs:6
+/whisk-system/utils/sort           private nodejs:6
 ```
 
 ## Delete actions
@@ -448,23 +480,23 @@ actions
 You can clean up by deleting actions that you do not want to use.
 
 1. Run the following command to delete an action:
+
   ```
-  nim action delete demo/hello-followup
-  ok: deleted demo/hello-followup
+  nim action delete greeting
+  ok: deleted greeting
   ```
 
 2. Verify that the action no longer appears in the list of actions.
+
+**[[NH: please check output:]]**
   ```
   nim action list
   ```
   ```
   actions
-  /demo/hello                private sequence
+  /guest/mySequence                private sequence
 
   ```
-
-**[[NH: Occurs to me it might be helpful to say whether these `nim action` commands work just locally or both locally and deployed.]]**
-
 
 ## Access action metadata within the action body
 
@@ -499,10 +531,10 @@ This command starts a polling loop that continuously checks for logs from activa
 
 2. Switch to another window and invoke an action:
 
-**[[NH: check command output:]]**
+**[[NH: check command and output:]]**
 ```
-nim action invoke /demo/hello
-ok: invoked /whisk.system/samples/helloWorld with id 7331f9b9e2044d85afd219b12c0f1491
+wsk action invoke /whisk-system/samples/helloWorld --param payload Bob
+ok: invoked /whisk-system/samples/helloWorld with id 7331f9b9e2044d85afd219b12c0f1491
 ```
 
 3. Observe the activation log in the polling window:
@@ -513,34 +545,3 @@ Activation: helloWorld (7331f9b9e2044d85afd219b12c0f1491)
 ```
 
 Similarly, whenever you run the poll utility, you see in real time the logs for any actions running on your behalf.
-
-## Languages and Runtimes
-Here are languages and runtimes supported in the Nimbella Cloud.
-
-### Supported languages for actions
-
-* [Ballerina](actions-ballerina.md)
-* [Go](actions-go.md)
-* [Java](actions-java.md)
-* [JavaScript](actions-nodejs.md)
-* [PHP](actions-php.md)
-* [Python](actions-python.md)
-* [Ruby](actions-ruby.md)
-* [Rust](actions-rust.md)
-* [Swift](actions-swift.md)
-* [.NET Core](actions-dotnet.md)
-* [Docker and native binaries](actions-docker.md)
-
-<---- **[[NH: Delete this paragraph? I deleted the 'action sequences' section.]]**
-Multiple actions from different languages may be composed together to create a longer processing pipeline called a [sequence](#creating-action-sequences). The polyglot nature of the composition is powerful in that it affords you the ability to use the right language for the problem you're solving, and separates the orchestration of the dataflow between functions from the choice of language. A more advanced form of composition is described [here](conductors.md).---->
-
-### Supported runtimes
-
-The Nimbella deployer determines the kind of runtime required for the action from the file suffix. The following runtimes are supported:
-
-* Node.js for suffix .js
-* Python for suffix .py
-* Java for suffixes .java and .jar
-* Swift suffix .swift
-* PHP for suffix .php
-* Go for suffix .go
