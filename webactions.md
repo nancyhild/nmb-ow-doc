@@ -135,7 +135,7 @@ function main(params) {
 The default `content-type` for an HTTP response is `application/json` and the body can be any allowed JSON value. The default `content-type` can be omitted from the headers.
 
 **[[NH: Note link to reference.md]]**
-It is important to be aware of the [response size limit](reference.md) for actions, because a response fails if it exceeds the predefined system limits. Large objects should not be sent inline through Nimbella, but instead deferred to an object store, for example.
+It is important to be aware of the response size limit for actions [see the Apache OpenWhisk document for reference](reference.md), because a response fails if it exceeds the predefined system limits. Large objects should not be sent inline through Nimbella, but instead deferred to an object store, for example.
 
 ## HTTP request handling with actions
 
@@ -333,20 +333,30 @@ The result of these changes is that the `name` is bound to `Jane` and cannot be 
 ## Securing web actions
 
 **[[NH: I don't know what to do with this section, please advise.]]**
-By default, a web action can be invoked by anyone having the web action's invocation URL. Use the `require-whisk-auth` [web action annotation](annotations.md#annotations-specific-to-web-actions) to secure the web action. When the `require-whisk-auth` annotation is set to `true`, the action will authenticate the invocation request's Basic Authorization credentials to confirm they represent a valid OpenWhisk identity.  When set to a number or a case-sensitive string, the action's invocation request must include a `X-Require-Whisk-Auth` header having this same value. Secured web actions will return a `Not Authorized` when credential validation fails.
+By default, a web action can be invoked by anyone having the web action's invocation URL. To secure the web action, use one of the following two options.
 
-Alternatively, use the `--web-secure` flag to automatically set the `require-whisk-auth` annotation.  When set to `true` a random number is generated as the `require-whisk-auth` annotation value. When set to `false` the `require-whisk-auth` annotation is removed.  When set to any other value, that value is used as the `require-whisk-auth` annotation value.
+### Use the `require-whisk-auth` web action annotation
+
+When the `require-whisk-auth` annotation is set to `true`, the action authenticates the invocation request's Basic Authorization credentials to confirm they represent a valid OpenWhisk identity.  When set to a number or a case-sensitive string, the action's invocation request must include a `X-Require-Whisk-Auth` header having this same value. Secured web actions return a `Not Authorized` when credential validation fails.  for more information about annotations (`-a`), see [this Apache OpenWhisk document](annotations.md#annotations-specific-to-web-actions).
+
+### Use the `--web-secure` flag
+
+The `--web-secure` flag automatically sets the `require-whisk-auth` annotation to `true`.
+
+### Examples of securing a web action
+
+The first  example is equivalent to the second except the first uses the `--web-secure` flag instead of the `require-whisk-auth` annotation. The third is an example using `curl`.
 
 ```bash
-$ wsk action update /guest/demo/hello hello.js --web true --web-secure my-secret
+$ nim action update /my-namespace/demo/hello hello.js --web true --web-secure my-secret
 ```
 or
 ```bash
-$ wsk action update /guest/demo/hello hello.js --web true -a require-whisk-auth my-secret
+$ nim action update /my-namespace/demo/hello hello.js --web true -a require-whisk-auth my-secret
 ```
 
 ```bash
-$ curl https://${APIHOST}/api/v1/web/guest/demo/hello.json?name=Jane -X GET -H "X-Require-Whisk-Auth: my-secret"
+$ curl https://${APIHOST}/api/v1/web/my-namespace/demo/hello.json?name=Jane -X GET -H "X-Require-Whisk-Auth: my-secret"
 ```
 
 **Important:** The owner of the web action owns all of the web action's activation records and incurs the cost of running the action in the system regardless of how the action was invoked.
@@ -529,18 +539,4 @@ Developers should be aware of how web actions might be used and generate error r
 
 ## Vanity URL
 
-Web actions may be accessed via an alternate URL, which treats the Nimbella namespace as a subdomain to the API host. This is suitable for developing web actions that use cookies or local storage so that data is not inadvertently made visible to other web actions in other namespaces. The namespaces must match the regular expression `[a-zA-Z0-9-]+` (and should be 63 characters or fewer) for the edge router to rewrite the subdomain to the corresponding URI. For a conforming namespace, the URL `https://guest.openwhisk-host/public/index.html` becomes a alias for `https://openwhisk-host/api/v1/web/guest/public/index.html`. **[[NH: PLease advise on what to do with these URLs.]]**
-
-For added convenience and to provide the equivalent of an `index.html`, the edge router will also proxy `https://guest.openwhisk-host` to `https://openwhisk-host/api/v1/web/my-namespace/public/index.html` where `/my-namespace/public/index.html` is a web action that responds with HTML content. In other words, the action is called `index` in a package called `public`. If the action does not exist, the API host responds with `404 Not Found`.
-
-For a local deployment, you must provide name resolution for the vanity URL to work. The easiest solution is to add an entry in `/etc/host` for `<namespace>.openwhisk-host`, as in:
-**[[NH: Do I change `openwhisk-host` to something else or leave it?]]**
-```bash
-127.0.0.1  my-namespace.openwhisk-host
-```
-or using a name resolver in combination with `curl` for example, as in:
-```bash
-$ curl -k https://my-namespace.openwhisk-host --resolve my-namespace.openwhisk-host:443:127.0.0.1
-```
-**[[NH: Check link in this paragraph.]]**
-You must also generate an edge router configuration and SSL certificate that uses the proper hostname. This can be done by modifying a proper host name (see [global environment variables](../ansible/group_vars/all#L18)) and running the [`setup.yml`](../ansible/setup.yml) and [`edge.yml`](../ansible/edge.yml) playbooks.
+**[[This section to be rewritten by Josh or Rodric.]]**
