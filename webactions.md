@@ -42,8 +42,7 @@ ok: got action hello
 https://${APIHOST}/api/v1/web/guest/demo/hello
 ```
 
-**[[NH: check link to webactions.md.]]**
-To configure a web action with credentials, refer to [Securing web actions](webactions.md#securing-web-actions).
+To configure a web action with credentials, refer to the Apache OpenWhisk document [Securing web actions](webactions.md#securing-web-actions).
 
 ### The URL for a web action
 
@@ -134,8 +133,7 @@ function main(params) {
 
 The default `content-type` for an HTTP response is `application/json` and the body can be any allowed JSON value. The default `content-type` can be omitted from the headers.
 
-**[[NH: Note link to reference.md]]**
-It is important to be aware of the response size limit for actions [see the Apache OpenWhisk document for reference](reference.md), because a response fails if it exceeds the predefined system limits. Large objects should not be sent inline through Nimbella, but instead deferred to an object store, for example.
+It is important to be aware of the response size limit for actions [see the Apache OpenWhisk document on reference](reference.md), because a response fails if it exceeds the predefined system limits. Large objects should not be sent inline through Nimbella, but instead deferred to an object store, for example.
 
 ## HTTP request handling with actions
 
@@ -162,8 +160,7 @@ All web actions, when invoked, receive additional HTTP request details as parame
 
 A request may not override any of the named `__ow_` parameters above; doing so will result in a failed request with status equal to `400 Bad Request`.
 
-**[[NH: Note link to annotations.md]]**
-The `__ow_user` property is only present when the web action is [annotated to require authentication](annotations.md#annotations-specific-to-web-actions) and allows a web action to implement its own authorization policy.
+The `__ow_user` property is only present when the web action is annotated to require authentication and allows a web action to implement its own authorization policy. See the [Apache OpenWnihsk document on annotations](https://github.com/apache/openwhisk/blob/master/docs/annotations.md/#annotations-specific-to-web-actions).
 
 The `__ow_query` property is available only when a web action elects to handle the ["raw" HTTP request](#raw-http-handling). It is a string containing the query parameters parsed from the URI (separated by `&`).
 
@@ -332,12 +329,11 @@ The result of these changes is that the `name` is bound to `Jane` and cannot be 
 
 ## Securing web actions
 
-**[[NH: I don't know what to do with this section, please advise.]]**
 By default, a web action can be invoked by anyone having the web action's invocation URL. To secure the web action, use one of the following two options.
 
 ### Use the `require-whisk-auth` web action annotation
 
-When the `require-whisk-auth` annotation is set to `true`, the action authenticates the invocation request's Basic Authorization credentials to confirm they represent a valid OpenWhisk identity.  When set to a number or a case-sensitive string, the action's invocation request must include a `X-Require-Whisk-Auth` header having this same value. Secured web actions return a `Not Authorized` when credential validation fails.  for more information about annotations (`-a`), see [this Apache OpenWhisk document](annotations.md#annotations-specific-to-web-actions).
+When the `require-whisk-auth` annotation is set to `true`, the action authenticates the invocation request's Basic Authorization credentials to confirm they represent a valid OpenWhisk identity.  When set to a number or a case-sensitive string, the action's invocation request must include a `X-Require-Whisk-Auth` header having this same value. Secured web actions return a `Not Authorized` when credential validation fails.  for more information about annotations (`-a`), see [this Apache OpenWhisk document](https://github.com/apache/openwhisk/blob/master/docs/annotations.md).
 
 ### Use the `--web-secure` flag
 
@@ -371,8 +367,8 @@ $ nim action update /my-namespace/demo/hello hello.js --web false
 
 ## Raw HTTP handling
 
-**[[NH: Note link to annotations.md]]**
-A web action may elect to interpret and process an incoming HTTP body directly, without the promotion of a JSON object to first class properties available to the action input (e.g., `args.name` versus parsing `args.__ow_query`). This is done via a `raw-http` [annotation](annotations.md). Using the same example show earlier, but now as a "raw" HTTP web action receiving `name` both as a query parameter and as a JSON value in the HTTP request body:
+A web action may elect to interpret and process an incoming HTTP body directly, without the promotion of a JSON object to first class properties available to the action input (e.g., `args.name` versus parsing `args.__ow_query`). This is done via a `raw-http` [annotation](See the [Apache OpenWhisk document on annotations](https://github.com/apache/openwhisk/blob/master/docs/annotations.md)). Using the same example show earlier, but now as a "raw" HTTP web action receiving `name` both as a query parameter and as a JSON value in the HTTP request body:
+
 ```bash
 $ curl https://${APIHOST}/api/v1/web/my-namespace/demo/hello.json?name=Jane -X POST -H "Content-Type: application/json" -d '{"name":"Jane"}'
 {
@@ -472,6 +468,7 @@ function main(array $args) : array
 ```
 
 As an example, save the `Node` function as `decode.js` and execute the following commands:
+
 ```bash
 $ nim action create decode decode.js --web raw
 ok: created action decode
@@ -525,8 +522,8 @@ $ curl https://${APIHOST}/api/v1/web/automatically/default/custom-options.http -
 A web action in a shared (i.e., public) package is accessible as a web action either directly via the package's fully qualified name, or via a package binding.
 
 **Important:** A web action in a public package is accessible for all bindings of the package even if the binding is private. This is because the web action annotation is carried on the action and cannot be overridden. If you don't want to expose a web action through your package bindings, clone-and-own the package instead.
-**[[NH: Note link to annotations.md in next paragraph.]]**
-Action parameters are inherited from its package and, if there is one, the binding. You can make package parameters [immutable](./annotations.md#protected-parameters) by defining their values through a package binding.
+
+Action parameters are inherited from its package and, if there is one, the binding. You can make package parameters immutable by defining their values through a package binding. See the [Apache OpenWhisk document on annotations](https://github.com/apache/openwhisk/blob/master/docs/annotations.md/#protected-parameters).
 
 ## Error handling
 
