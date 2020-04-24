@@ -417,10 +417,9 @@ Code associated with an existing action may be retrieved and saved locally. Savi
 
 1. Save action code to a filename that corresponds with an existing action name in the current working directory. A file extension that corresponds to the action kind is used. An extension of _.zip_ is used for action code that is a zip file.
 
-  **[[NH: please check command and output:]]**
   ```
   nim action get /whisk-system/samples/greeting --save
-  ok: saved action code to /path/to/namespace/greeting.js
+  ok
   ```
 
 2. You can provide your own file name and extension by using the `--save-as` flag.
@@ -444,23 +443,24 @@ nim action list
 
 Here, we see actions listed in order from most to least recently updated. For easier browsing, you can use the flag `--name-sort` or `-n` to sort the list alphabetically:
 
-**[[NH: Output list seems backwards for alphabetical order?]]**
 ```
 nim action list --name-sort
-  actions
-  /guest/mySequence                  private sequence
-  /guest/greeting                    private nodejs:6
+  Datetime          Version   Access      Kind         Actions                                           
+  04/01/20 10:04:60 0.0.5     web open    nodejs:10      /wbtestni-grinjpsjnuh/action                      
+  03/31/20 14:03:26 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/awsbill             
+  03/21/20 16:03:10 0.0.6     web open    php:7.3        /wbtestni-grinjpsjnuh/visits/counter              
+  03/31/20 14:03:30 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/datadogbill         
+  03/31/20 14:03:31 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/dobill              
+  03/22/20 11:03:44 0.0.8     private     nodejs:10      /wbtestni-grinjpsjnuh/echo/echo                   
+  03/23/20 13:03:76 0.0.8     private     php:7.3        /wbtestni-grinjpsjnuh/visits/info    
 ```
-
-The list is now sorted alphabetically by namespace, then package name if any, and finally action name, with the default package (no specified package) listed at the top. **[[NH: Is namespace listed in this output example? What does output look like if there's a package? Does nim output list the namespace?]]**
 
 **Note**: The printed list is sorted alphabetically after it is received from the platform. Other list flags such as `--limit` and `--skip` are applied to the block of actions before they are received for sorting. To list actions in order by creation time, use the flag `--time`.
 
 To filter your list of actions to just those within a specific package, use this command:
 
-**[[NH: please check command and output:]]**
 ```
-him action list /whisk-system/utils
+nim action list /whisk-system/utils
 ```
 ```
 actions
@@ -488,7 +488,6 @@ You can clean up by deleting actions that you do not want to use.
 
 2. Verify that the action no longer appears in the list of actions.
 
-**[[NH: please check output:]]**
   ```
   nim action list
   ```
@@ -500,11 +499,7 @@ You can clean up by deleting actions that you do not want to use.
 
 ## Access action metadata within the action body
 
-**[[NH: "OpenWhisk assets" in next paragraph ok?]]**
-
 The action environment contains several properties that are specific to the running action. These allow the action to programmatically work with OpenWhisk assets via the REST API or set an internal alarm when the action is about to use up its allotted time budget.
-
-**[[NH: Not sure what to do with these properties--please advise. Also note link to annotations.md]]**
 
 The properties are accessible via the system environment for all supported runtimes: Node.js, Python, Swift, Java and Docker actions.
 
@@ -529,19 +524,16 @@ nim activation poll
 
 This command starts a polling loop that continuously checks for logs from activations.
 
-2. Switch to another window and invoke an action:
+2. Switch to another window and invoke an action:  
+  ```
+  nim action invoke /whisk-system/samples/helloWorld --param payload Bob
+  ok: invoked /whisk-system/samples/helloWorld with id 7331f9b9e2044d85afd219b12c0f1491
+  ```
 
-**[[NH: check command and output:]]**
-```
-wsk action invoke /whisk-system/samples/helloWorld --param payload Bob
-ok: invoked /whisk-system/samples/helloWorld with id 7331f9b9e2044d85afd219b12c0f1491
-```
-
-3. Observe the activation log in the polling window:
-**[[NH: check output:]]**
-```
-Activation: helloWorld (7331f9b9e2044d85afd219b12c0f1491)
-  2016-02-11T16:46:56.842065025Z stdout: hello bob!
-```
+3. Observe the activation log in the polling window:  
+  ```
+  Activation: helloWorld (7331f9b9e2044d85afd219b12c0f1491)
+    2016-02-11T16:46:56.842065025Z stdout: hello bob!
+  ```
 
 Similarly, whenever you run the poll utility, you see in real time the logs for any actions running on your behalf.
