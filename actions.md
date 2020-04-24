@@ -19,6 +19,7 @@ Actions abstract away from the source languages in which the functions are writt
 The `nim` CLI operations to create, invoke, and manage actions are the same regardless of the actual function code.
 
 ### Supported Languages and Runtimes
+
 Here are languages and runtimes supported in the Nimbella Cloud, with links to more complete OpenWhisk tutorials for each language. We recommend reading the basics in this document first, which are language agnostic, before getting deeper into a language-specific tutorial. If your preferred language isn't supported directly, the Docker action or native binary paths may be more suitable.
 
 **Supported languages**
@@ -52,17 +53,15 @@ As an alternative, you can [create your own runtime](https://github.com/apache/o
 
 To use a function as an action, it must conform to the following requirements:
 
-- The function accepts a dictionary as input and produces a dictionary as output.
-
+- The function accepts a dictionary as input and produces a dictionary as output.  
   The input and output dictionaries are key-value pairs, where the key is a string and the value is any valid JSON value. The dictionaries are canonically represented as JSON objects when interfacing to an action via the REST API or the `nim` CLI.
-
-- The function must be called `main` or otherwise must be explicitly exported to identify it as the entry point.
-
+- The function must be called `main` or otherwise must be explicitly exported to identify it as the entry point.  
   The mechanics may vary depending on your choice of language, but in general the entry point can be specified using the `--main` flag in `nim` commands.
 
 Note the following additional considerations:
 
-- Functions should be stateless, or *idempotent*. While the system does not enforce this property, there is no guarantee that any state maintained by an action will be available across invocations. In some cases, deliberately leaking state across invocations may be advantageous for performance, but also exposes some risks.
+- Functions should be stateless, or *idempotent*.  
+  While the system does not enforce this property, there is no guarantee that any state maintained by an action will be available across invocations. In some cases, deliberately leaking state across invocations may be advantageous for performance, but also exposes some risks.
 - Functions should follow best practices to reduce vulnerabilities by treating input as untrusted, and be aware of vulnerabilities they may inherit from third-party dependencies.
 
 
@@ -100,8 +99,10 @@ ok: created action greeting
 
 For convenience, you can omit the namespace when working with actions that belong to you. Also if there is no package, use the action name without a package name. If you modify the code and want to update the action, use `nim action update`:
 
+```
 nim action update greeting greeting.js
 ok: updated action greeting
+```
 
 The `nim action create` and `nim action update` commands are the same in terms of their command-like parameters.
 
@@ -242,7 +243,7 @@ To run a `nim` command asynchronously, use the `--no-wait` parameter, or `-n` fo
  nim action invoke greeting --no-wait
 ```
 
-**Tip:** If you're an OpenWhisk developer, you'll notice that the `wsk action invoke` is asynchronous by default, wherease the `nim action invoke` command is synchronous by default.
+**Tip:** If you're an OpenWhisk developer, you'll notice that the `wsk action invoke` is asynchronous by default, whereas the `nim action invoke` command is synchronous by default.
 
 ### The activation record
 
@@ -262,7 +263,7 @@ Each invocation of an action results in an activation record, which contains the
       - the action exceeded its time limit during the init or run phase
       - the action specified a wrong docker container name
       - the action did not properly implement the expected [runtime protocol](actions-new.md)
-    - *"whisk internal error"*: the system was unable to invoke the action. **[[NH: is 'whisk' ok here? Note also in table below]]**
+    - *"whisk internal error"*: the system was unable to invoke the action. 
   - `statusCode`: A value between 0 and 3 that maps to the activation result, as described by the *status* field:
 
     | statusCode | status                 |
@@ -340,7 +341,6 @@ Here's the meaning of each column in the list:
 
 Metadata that describes existing actions can be retrieved via the `nim action get` command.
 
-**[[NH: check output, looks like the original had no package so my command is wrong?]]**
 ```
 nim action get greeting
 ok: got action greeting
@@ -383,11 +383,9 @@ ok: got action actionName
 https://${APIHOST}/api/v1/namespaces/${NAMESPACE}/actions/greeting
 ```
 
-**[[NH: check link]]**
-Authentication is required when invoking an action via an HTTPS request using this resource path. For more information regarding action invocations using the REST interface, see [Using REST APIs with OpenWhisk](rest_api.md#actions).
+Authentication is required when invoking an action via an HTTPS request using this resource path. For more information regarding action invocations using the REST interface, see [Using REST APIs with OpenWhisk](https://github.com/apache/openwhisk/blob/master/docs/rest_api.md#actions).
 
-**[[NH: check link:]]**
-Another way of invoking an action that does not require authentication is via [web actions](webactions.md#web-actions).
+Another way of invoking an action that does not require authentication is via [web actions](webactions.md).
 
 Any action may be exposed as a web action, using the `--web true` command line option when creating or updating an action.
 
@@ -422,9 +420,7 @@ Code associated with an existing action may be retrieved and saved locally. Savi
   ok
   ```
 
-2. You can provide your own file name and extension by using the `--save-as` flag.
-
-  **[[NH: check output:]]**
+2. You can provide your own file name and extension by using the `--save-as` flag.  
   ```
   wsk action get /whisk-system/samples/greeting --save-as hello.js
   ok: saved action code to /path/to/namespace/hello.js
@@ -437,22 +433,22 @@ You can list all the actions that you have created using the following commnand:
 ```
 nim action list
   actions
-  /guest/mySequence                  private sequence
-  /guest/greeting                    private nodejs:6
+    /guest/mySequence                  private sequence
+    /guest/greeting                    private nodejs:6
 ```
 
 Here, we see actions listed in order from most to least recently updated. For easier browsing, you can use the flag `--name-sort` or `-n` to sort the list alphabetically:
 
 ```
 nim action list --name-sort
-  Datetime          Version   Access      Kind         Actions                                           
-  04/01/20 10:04:60 0.0.5     web open    nodejs:10      /wbtestni-grinjpsjnuh/action                      
-  03/31/20 14:03:26 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/awsbill             
-  03/21/20 16:03:10 0.0.6     web open    php:7.3        /wbtestni-grinjpsjnuh/visits/counter              
-  03/31/20 14:03:30 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/datadogbill         
-  03/31/20 14:03:31 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/dobill              
-  03/22/20 11:03:44 0.0.8     private     nodejs:10      /wbtestni-grinjpsjnuh/echo/echo                   
-  03/23/20 13:03:76 0.0.8     private     php:7.3        /wbtestni-grinjpsjnuh/visits/info    
+  Datetime          Version   Access      Kind         Actions
+  04/01/20 10:04:60 0.0.5     web open    nodejs:10      /wbtestni-grinjpsjnuh/action
+  03/31/20 14:03:26 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/awsbill
+  03/21/20 16:03:10 0.0.6     web open    php:7.3        /wbtestni-grinjpsjnuh/visits/counter
+  03/31/20 14:03:30 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/datadogbill
+  03/31/20 14:03:31 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/dobill
+  03/22/20 11:03:44 0.0.8     private     nodejs:10      /wbtestni-grinjpsjnuh/echo/echo 
+  03/23/20 13:03:76 0.0.8     private     php:7.3        /wbtestni-grinjpsjnuh/visits/info
 ```
 
 **Note**: The printed list is sorted alphabetically after it is received from the platform. Other list flags such as `--limit` and `--skip` are applied to the block of actions before they are received for sorting. To list actions in order by creation time, use the flag `--time`.
@@ -461,40 +457,32 @@ To filter your list of actions to just those within a specific package, use this
 
 ```
 nim action list /whisk-system/utils
-```
-```
-actions
-/whisk-system/utils/hosturl        private nodejs:6
-/whisk-system/utils/namespace      private nodejs:6
-/whisk-system/utils/cat            private nodejs:6
-/whisk-system/utils/smash          private nodejs:6
-/whisk-system/utils/echo           private nodejs:6
-/whisk-system/utils/split          private nodejs:6
-/whisk-system/utils/date           private nodejs:6
-/whisk-system/utils/head           private nodejs:6
-/whisk-system/utils/sort           private nodejs:6
+  actions
+    /whisk-system/utils/hosturl        private nodejs:6
+    /whisk-system/utils/namespace      private nodejs:6
+    /whisk-system/utils/cat            private nodejs:6
+    /whisk-system/utils/smash          private nodejs:6
+    /whisk-system/utils/echo           private nodejs:6
+    /whisk-system/utils/split          private nodejs:6
+    /whisk-system/utils/date           private nodejs:6
+    /whisk-system/utils/head           private nodejs:6
+    /whisk-system/utils/sort           private nodejs:6
 ```
 
 ## Delete actions
 
 You can clean up by deleting actions that you do not want to use.
 
-1. Run the following command to delete an action:
-
+1. Run the following command to delete an action:  
   ```
   nim action delete greeting
   ok: deleted greeting
   ```
-
-2. Verify that the action no longer appears in the list of actions.
-
+2. Verify that the action no longer appears in the list of actions.  
   ```
   nim action list
-  ```
-  ```
-  actions
-  /guest/mySequence                private sequence
-
+    actions
+      /guest/mySequence                private sequence
   ```
 
 ## Access action metadata within the action body
@@ -511,25 +499,20 @@ The properties are accessible via the system environment for all supported runti
 * `__OW_ACTIVATION_ID` the activation ID for this running action instance.
 * `__OW_DEADLINE` the approximate time for this action to consume its entire duration quota (measured in epoch milliseconds).
 
-###Watch action output
+### Watch action output
 
 `nim` actions might be invoked by other users in response to various events. In such cases it can be useful to monitor the invocations.
 
 You can use the `nim` CLI to watch the output of actions as they are invoked.
 
-1. Issue the following command from a shell:
-```
-nim activation poll
-```
-
+1. Issue the following command from a shell:  
+  `nim activation poll`  
 This command starts a polling loop that continuously checks for logs from activations.
-
 2. Switch to another window and invoke an action:  
   ```
   nim action invoke /whisk-system/samples/helloWorld --param payload Bob
-  ok: invoked /whisk-system/samples/helloWorld with id 7331f9b9e2044d85afd219b12c0f1491
+    ok: invoked /whisk-system/samples/helloWorld with id 7331f9b9e2044d85afd219b12c0f1491
   ```
-
 3. Observe the activation log in the polling window:  
   ```
   Activation: helloWorld (7331f9b9e2044d85afd219b12c0f1491)
