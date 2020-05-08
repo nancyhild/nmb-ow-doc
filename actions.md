@@ -90,21 +90,23 @@ function main(params) {
 ```
 ## Create and update an action
 
-You use this example function to create your own version of the action in your own namespace:
+You can use this example function on your local system to create the action in your own namespace, where `greeting` is the name of the action and `path/to/greeting.js` is the JavaScript file on your local system:
 
 ```
-nim action create greeting greeting.js
-ok: created action greeting
+nim action create greeting path/to/greeting.js
 ```
+**[[NH: I got no output from this nim action create command in Mac terminal but when I do nim action get the action is in my namespace.]]**
 
-For convenience, you can omit the namespace when working with actions that belong to you. Also if there is no package, use the action name without a package name. If you modify the code and want to update the action, use `nim action update`:
+**Tip:** For convenience, you can omit the namespace when working with actions that belong to you. Also if there is no package, as in the previous example, use the action name without a package name. 
+
+If you modify the code and want to update the action, use `nim action update`:
 
 ```
 nim action update greeting greeting.js
-ok: updated action greeting
 ```
+**[[NH: No command output.]]**
 
-The `nim action create` and `nim action update` commands are the same in terms of their command-like parameters.
+The `nim action create` and `nim action update` commands are the same in terms of their command-line parameters.
 
 ## Invoke an action
 
@@ -161,7 +163,7 @@ The default output greeting from the `greeting` action is "Hello, stranger from 
 Here's how these parameters look in the `nim action invoke` command and its output:
 
 ```
-nim action invoke /greeting --param name Dorothy --param place Kansas
+nim action invoke greeting --param name Dorothy --param place Kansas
 {
   "msg": "Hello, Dorothy from Kansas!"
 }
@@ -184,8 +186,8 @@ nim action invoke greeting
 **Use `nim action update` to bind a new value for the `name` property:**
 ```
 nim action update greeting --param name Toto
-ok: updated action greeting
 ```
+**[[NH: No command output.]]**
 
 **Invoke the action to test the new value:**
 ```
@@ -239,21 +241,106 @@ In contrast, when the activation request is asynchronous, the HTTP request termi
 
 To run a `nim` command asynchronously, use the `--no-wait` parameter, or `-n` for short, as in this command to invoke the `greeting` action:
 
- ```
- nim action invoke greeting --no-wait
 ```
+nim action invoke greeting --no-wait
+  {
+    "activationId": "7596b4c7eda544c896b4c7eda5b4c8c2"
+  }
+```
+
+To retrieve the result, use either of the following commands:
+
+```
+nim activation result 7596b4c7eda544c896b4c7eda5b4c8c2
+  {
+    "msg": "Hello, Toto from somewhere!"
+  }
+```
+
+```
+nim activation result --last
+  {
+    "msg": "Hello, Toto from somewhere!"
+  }
+```
+
+For other commands to view the activation record, see [the next section on the activation record](#the-activation-record) for more information.
 
 **Tip:** If you're an OpenWhisk developer, you'll notice that the `wsk action invoke` is asynchronous by default, whereas the `nim action invoke` command is synchronous by default.
 
-### The activation record
+## The activation record
 
-Each invocation of an action results in an activation record, which contains the following fields:
+Each invocation of an action results in an activation record. 
+
+#### Activation record example
+
+To retrieve the activation record for a particular activation ID, use this command.
+
+```
+nim activation get 7596b4c7eda544c896b4c7eda5b4c8c2
+{
+  "activationId": "7596b4c7eda544c896b4c7eda5b4c8c2",
+  "annotations": [
+    {
+      "key": "path",
+      "value": "<your-namespace>/greeting"
+    },
+    {
+      "key": "waitTime",
+      "value": 122
+    },
+    {
+      "key": "entry",
+      "value": "main"
+    },
+    {
+      "key": "kind",
+      "value": "nodejs:10"
+    },
+    {
+      "key": "timeout",
+      "value": false
+    },
+    {
+      "key": "limits",
+      "value": {
+        "concurrency": 1,
+        "logs": 10,
+        "memory": 256,
+        "timeout": 60000
+      }
+    }
+  ],
+  "duration": 3,
+  "end": 1588961196282,
+  "logs": [
+    "2020-05-08T18:06:36.281795661Z stdout: params: { name: 'Toto' }"
+  ],
+  "name": "greeting",
+  "namespace": "<your-namespace>",
+  "publish": false,
+  "response": {
+    "result": {
+      "msg": "Hello, Toto from somewhere!"
+    },
+    "size": 37,
+    "status": "success",
+    "success": true
+  },
+  "start": 1588961196279,
+  "subject": "me@examplemail.net",
+  "version": "0.0.3",
+  "date": "5/8/2020, 11:06:36 AM"
+}
+```
+
+The output includes the following fields:
 
 - `activationId`: The activation ID.
-- `namespace` and `name`: The namespace and name of the entity.
+- `annotations`: An array of key-value pairs that record [metadata](annotations.md#annotations-specific-to-activations) about the action activation.
+- `namespace` and `name`: Your Nimbella namespace and name of the entity.
 - `start` and `end`: Timestamps recording the start and end of the activation. The values are in [UNIX time format](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15).
 - `logs`: An array of strings with the logs that are produced by the action during its activation. Each array element corresponds to a line output to `stdout` or `stderr` by the action, and includes the time and stream of the log output. The structure is as follows: `TIMESTAMP` `STREAM:` `LOG LINE`.
-- `annotations`: An array of key-value pairs that record [metadata](annotations.md#annotations-specific-to-activations) about the action activation.
 - `response`: A dictionary that defines the following keys
   - `status`: The activation result, which might be one of the following values:
     - *"success"*: the action invocation completed successfully.
@@ -262,8 +349,7 @@ Each invocation of an action results in an activation record, which contains the
       - the action failed to initialize for any reason
       - the action exceeded its time limit during the init or run phase
       - the action specified a wrong docker container name
-      - the action did not properly implement the expected [runtime protocol](actions-new.md)
-    - *"whisk internal error"*: the system was unable to invoke the action. 
+      - the action did not properly implement the expected [runtime protocol]
   - `statusCode`: A value between 0 and 3 that maps to the activation result, as described by the *status* field:
 
     | statusCode | status                 |
@@ -271,11 +357,11 @@ Each invocation of an action results in an activation record, which contains the
     | 0          | success                |
     | 1          | application error      |
     | 2          | action developer error |
-    | 3          | whisk internal error   |
+    | 3          | internal error   |
   - `success`: Is *true* if and only if the status is *"success"*.
   - `result`: A dictionary as a JSON object which contains the activation result. If the activation was successful, this contains the value that is returned by the action. If the activation was unsuccessful, `result` contains the `error` key, generally with an explanation of the failure.
 
-### View the activation record
+### Other commands to view the activation record
 
 Here are some common `nim activation` commands for viewing all or parts of the activation record.
 
@@ -299,32 +385,28 @@ The `nim activation list` command lists all activations or activations filtered 
 
 #### `nim activation list` example output
 
-List the last six activations:
+List the last three activations:
 
 ```
-nim activation list --limit 6
-```
+nim activation list --limit 3
 
-| Datetime | Activation ID | Kind | Start | Duration | Status | Entity |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 2019-03-16 20:03:00 | 8690bc9904794c9390bc9904794c930e | nodejs:6  | warm  | 2ms | success | guest/tripleAndIncrement:0.0.1 |
-| 2019-03-16 20:02:59 | 7e76452bec32401db6452bec32001d68 | nodejs:6  | cold | 32ms | success | guest/increment:0.0.1
-| 2019-03-16 20:02:59 | 097250ad10a24e1eb250ad10a23e1e96 | nodejs:6 | warm | 2ms | success | guest/tripleAndIncrement:0.0.1 |
-| 2019-03-16 20:02:58 | 4991a50ed9ed4dc091a50ed9edddc0bb | nodejs:6 | cold | 33ms | success | guest/triple:0.0.1 |
-| 2019-03-16 20:02:57 | aee63124f3504aefa63124f3506aef8b | nodejs:6 | cold | 34ms | success | guest/tripleAndIncrement:0.0.1
-| 2019-03-16 20:02:57 | 22da217c8e3a4b799a217c8e3a0b79c4 | sequence | warm | 3.46s | success | guest/tripleAndIncrement:0.0.1
-</pre>
+Datetime        Status   Kind     Version  Activation ID                    Start Duration Entity                         
+05/08 11:05:27  success  nodejs   0.0.3    7596b4c7eda544c896b4c7eda5b4c8c2 warm  3ms      <your-namespace>/greeting 
+05/08 11:05:54  success  nodejs   0.0.3    12d95fa0ddd14840995fa0ddd1a840bd warm  3ms      <your-namespace>/greeting2 
+05/08 11:05:70  success  nodejs   0.0.3    d34af00e0cdf4ee78af00e0cdf2ee78a warm  3ms      <your-namespace>/greeting2 
+```
 
 Here's the meaning of each column in the list:
 
 | Column | Description |
 | :--- | :--- |
 | `Datetime` | The date and time when the invocation occurred. |
-| `Activation ID` | An activation ID that can be used to retrive the result using the `nim activation get`, `nim activation result` and `nim activation logs` commands. |
+| `Status` | The outcome of the invocation. For an explanation of the various statuses, see the description of the `statusCode` below. |
 | `Kind` | The runtime or action type |
+| `Version` | The version of the action. For information about versioning, see the [CLI Command Line guide](https://nimbella.io/downloads/nim/nim.html#recordkeeping-in-your-local-project).
+| `Activation ID` | An activation ID that can be used to retrive the result using the `nim activation get`, `nim activation result` and `nim activation logs` commands. |
 | `Start` | An indication of the latency, i.e. if the runtime container was cold or warm started. |
 | `Duration` | Time taken to execute the invocation. |
-| `Status` | The outcome of the invocation. For an explanation of the various statuses, see the description of the `statusCode` below. |
 | `Entity` | The fully qualified name of entity that was invoked. |
 
 ## Further considerations for creating actions
@@ -343,28 +425,40 @@ Metadata that describes existing actions can be retrieved via the `nim action ge
 
 ```
 nim action get greeting
-ok: got action greeting
-{
-    "namespace": "guest",
-    "name": "hello",
-    "version": "0.0.1",
-    "exec": {
-        "kind": "nodejs:6",
-        "binary": false
-    },
+  {
     "annotations": [
-        {
-            "key": "exec",
-            "value": "nodejs:6"
-        }
+      {
+        "key": "provide-api-key",
+        "value": false
+      },
+      {
+        "key": "exec",
+        "value": "nodejs:10"
+      }
     ],
-    "limits": {
-        "timeout": 60000,
-        "memory": 256,
-        "logs": 10
+    "exec": {
+      "kind": "nodejs:10",
+      "binary": false
     },
-    "publish": false
-}
+    "limits": {
+      "concurrency": 1,
+      "logs": 10,
+      "memory": 256,
+      "timeout": 60000
+    },
+    "name": "greeting2",
+    "namespace": "<your-namespace>",
+    "parameters": [
+      {
+        "key": "name",
+        "value": "Toto"
+      }
+    ],
+    "publish": false,
+    "updated": 1588960857872,
+    "version": "0.0.3",
+    "date": "5/8/2020, 11:00:57 AM"
+  }
 ```
 
 ### Get the URL for an action
@@ -379,8 +473,8 @@ nim action get greeting --url
 
 A URL with the following format will be returned for standard actions:
 ```
-ok: got action actionName
-https://${APIHOST}/api/v1/namespaces/${NAMESPACE}/actions/greeting
+  action actionName
+    https://${APIHOST}/api/v1/namespaces/${NAMESPACE}/actions/greeting
 ```
 
 Authentication is required when invoking an action via an HTTPS request using this resource path. For more information regarding action invocations using the REST interface, see [Using REST APIs with OpenWhisk](https://github.com/apache/openwhisk/blob/master/docs/rest_api.md#actions).
@@ -391,64 +485,70 @@ Any action may be exposed as a web action, using the `--web true` command line o
 
 ```
 nim action update greeting --web true
-ok: updated action greeting
 ```
+**[[NH: No command output.]]**
 
 The resource URL for a web action is different:
 ```
 nim action get greeting --url
-ok: got action greeting
-https://${APIHOST}/api/v1/web/${NAMESPACE}/${PACKAGE}/greeting
+  https://${APIHOST}/api/v1/web/${NAMESPACE}/${PACKAGE}/greeting
 ```
 
 You can use `curl` or `wget` to invoke the action.
 ```
 curl `nim action get greeting --url | tail -1`.json
-{
-  "payload": "Hello, Toto from somewhere!"
-}
+  {
+    "msg": "Hello, Toto from somewhere!"
+  }
 ```
 
 ### Save action code
 
 Code associated with an existing action may be retrieved and saved locally. Saving can be performed on all actions except sequences and docker actions.
 
-1. Save action code to a filename that corresponds with an existing action name in the current working directory. A file extension that corresponds to the action kind is used. An extension of _.zip_ is used for action code that is a zip file.
+1. Save action code to a filename that corresponds with an existing action name in the current working directory.  
+  The resulting file extension corresponds to the action kind. An extension of _.zip_ is used for action code that is a zip file.
+  ```
+  nim action get greeting --save
+  ```
+  **[[NH: No command output.]]**
+2. Provide your own file name and extension by using the `--save-as` flag.  
+  ```
+  nim action get greeting --save-as hello.js
+  ```
+  **[[NH: No command output.]]**
 
-  ```
-  nim action get /whisk-system/samples/greeting --save
-  ok
-  ```
-
-2. You can provide your own file name and extension by using the `--save-as` flag.  
-  ```
-  wsk action get /whisk-system/samples/greeting --save-as hello.js
-  ok: saved action code to /path/to/namespace/hello.js
-  ```
 
 ### List actions
 
-You can list all the actions that you have created using the following commnand:
+List all the actions that you have created with the following commnand:
 
 ```
 nim action list
-  actions
-    /guest/mySequence                  private sequence
-    /guest/greeting                    private nodejs:6
+Datetime        Access   Kind     Version  Actions                                           
+05/07 11:05:33  web      nodejs   0.0.1    /<your-namespace>/greeting           
+05/07 10:05:46  web      nodejs   0.0.1    /<your-namespace>/ocr/progress                
+05/07 10:05:45  web      nodejs   0.0.1    /<your-namespace>/ocr/acceptImage             
+05/07 10:05:24  web      tessjs   0.0.1    /<your-namespace>/ocr/imageToText             
+05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/utils/slack                 
+05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/textToSpeech            
+05/07 10:05:24  web      nodejs   0.0.1    /ocr/credential 
 ```
 
-Here, we see actions listed in order from most to least recently updated. For easier browsing, you can use the flag `--name-sort` or `-n` to sort the list alphabetically:
+Actions are listed in order from most to least recently updated. In this example, the actions include the `greeting` action that we use for the examples in this article plus the actions in the [Nimbella OCR demo](https://github.com/nimbella/demo-projects/tree/master/ocr) that was deployed to our namespace.
+
+For easier browsing, you can use the flag `--name-sort` or `-n` to sort the list alphabetically:
 
 ```
 nim action list --name-sort
-  Datetime          Version   Access      Kind         Actions
-  04/01/20 10:04:60 0.0.5     web open    nodejs:10      /wbtestni-grinjpsjnuh/action
-  03/31/20 14:03:26 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/awsbill
-  03/21/20 16:03:10 0.0.6     web open    php:7.3        /wbtestni-grinjpsjnuh/visits/counter
-  03/31/20 14:03:30 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/datadogbill
-  03/31/20 14:03:31 0.0.4     web open    nodejs:10      /wbtestni-grinjpsjnuh/billing/dobill
-  03/22/20 11:03:44 0.0.8     private     nodejs:10      /wbtestni-grinjpsjnuh/echo/echo 
-  03/23/20 13:03:76 0.0.8     private     php:7.3        /wbtestni-grinjpsjnuh/visits/info
+Datetime        Access   Kind     Version  Actions                                           
+05/07 10:05:45  web      nodejs   0.0.1    /<your-namespace>/ocr/acceptImage             
+05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/credential              
+05/08 12:05:86  web      nodejs   0.0.4    /<your-namespace>/greeting                   
+05/07 10:05:24  web      tessjs   0.0.1    /<your-namespace>/ocr/imageToText             
+05/07 10:05:46  web      nodejs   0.0.1    /<your-namespace>/ocr/progress                
+05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/utils/slack                 
+05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/textToSpeech            
 ```
 
 **Note**: The printed list is sorted alphabetically after it is received from the platform. Other list flags such as `--limit` and `--skip` are applied to the block of actions before they are received for sorting. To list actions in order by creation time, use the flag `--time`.
@@ -456,17 +556,13 @@ nim action list --name-sort
 To filter your list of actions to just those within a specific package, use this command:
 
 ```
-nim action list /whisk-system/utils
-  actions
-    /whisk-system/utils/hosturl        private nodejs:6
-    /whisk-system/utils/namespace      private nodejs:6
-    /whisk-system/utils/cat            private nodejs:6
-    /whisk-system/utils/smash          private nodejs:6
-    /whisk-system/utils/echo           private nodejs:6
-    /whisk-system/utils/split          private nodejs:6
-    /whisk-system/utils/date           private nodejs:6
-    /whisk-system/utils/head           private nodejs:6
-    /whisk-system/utils/sort           private nodejs:6
+nim action list ocr
+Datetime        Access   Kind     Version  Actions                                           
+05/07 10:05:46  web      nodejs   0.0.1    /<your-namespace>/ocr/progress                
+05/07 10:05:45  web      nodejs   0.0.1    /<your-namespace>/ocr/acceptImage             
+05/07 10:05:24  web      tessjs   0.0.1    /<your-namespace>/ocr/imageToText             
+05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/textToSpeech            
+05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/credential 
 ```
 
 ## Delete actions
@@ -476,13 +572,18 @@ You can clean up by deleting actions that you do not want to use.
 1. Run the following command to delete an action:  
   ```
   nim action delete greeting
-  ok: deleted greeting
   ```
+  **[[NH: No command output.]]**
 2. Verify that the action no longer appears in the list of actions.  
   ```
-  nim action list
-    actions
-      /guest/mySequence                private sequence
+nim action list
+  Datetime        Access   Kind     Version  Actions                                           
+  05/07 10:05:46  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/progress                
+  05/07 10:05:45  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/acceptImage             
+  05/07 10:05:24  web      tessjs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/imageToText             
+  05/07 10:05:24  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/utils/slack                 
+  05/07 10:05:24  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/textToSpeech            
+  05/07 10:05:24  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/credential   
   ```
 
 ## Access action metadata within the action body
@@ -501,7 +602,8 @@ The properties are accessible via the system environment for all supported runti
 
 ### Watch action output
 
-`nim` actions might be invoked by other users in response to various events. In such cases it can be useful to monitor the invocations.
+`nim` actions might be invoked by other users in response to various events. In such cases it can be useful to monitor the invocations. Whenever you run the poll utility, you see in real time the logs for any actions running on your behalf.
+
 
 You can use the `nim` CLI to watch the output of actions as they are invoked.
 
@@ -510,13 +612,8 @@ You can use the `nim` CLI to watch the output of actions as they are invoked.
 This command starts a polling loop that continuously checks for logs from activations.
 2. Switch to another window and invoke an action:  
   ```
-  nim action invoke /whisk-system/samples/helloWorld --param payload Bob
-    ok: invoked /whisk-system/samples/helloWorld with id 7331f9b9e2044d85afd219b12c0f1491
+  nim action invoke greeting --param Toto
   ```
-3. Observe the activation log in the polling window:  
-  ```
-  Activation: helloWorld (7331f9b9e2044d85afd219b12c0f1491)
-    2016-02-11T16:46:56.842065025Z stdout: hello bob!
-  ```
+  **[[NH: No command output.]]**
+3. Observe the activation log in the polling window.
 
-Similarly, whenever you run the poll utility, you see in real time the logs for any actions running on your behalf.

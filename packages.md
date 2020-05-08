@@ -28,8 +28,14 @@ You can get a list of packages in a namespace, list the entities in a package, a
        (parameters: *apihost, *dbname, *host, overwrite, *password, *username)
     action /mynamespace/ocr/acceptImage: Read document from database
        (parameters: dbname, id, params)
-    action /mynamespace/ocr/credential: Write document in database
+    action /mynamespace/ocr/credential: ???
      (parameters: dbname, doc)
+     action /mynamespace/ocr/imageToText: ???
+      (parameters: dbname, doc)
+      action /mynamespace/ocr/progress: ???
+       (parameters: dbname, doc)
+       action /mynamespace/ocr/textToSpeech: ???
+        (parameters: dbname, doc)
    feed   /mynamespace/ocr/: Database change feed
      (parameters: dbname, filter, query_params)
   ...
@@ -71,7 +77,7 @@ You can invoke actions in a package, just as with other actions. The next few st
 1. Get a description of the `/mynamespace/ocr/acceptImage` action.
 
   ```
-  $ wsk action get --summary /mynamespace/ocr/acceptImage
+  $ wsk action get /mynamespace/ocr/acceptImage
   ```
   ```
   action /mynamespace/ocr/acceptImage: Returns a friendly greeting
