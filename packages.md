@@ -3,7 +3,7 @@
 You can use packages to bundle together a set of related actions and share them with others.
 
 A package can include *actions* and *feeds*.
-- An action is a piece of functional code that runs on `nim`. Actions can be written in various source codes: JavaScript, Python, PHP, and so on. For details about actions, see the document on [actions](actions.md#about-actions) and the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure)
+- An action is a piece of functional code that runs in the Nimbella cloud. Actions can be written in various source languages: JavaScript, Python, PHP, and so on. For details about actions, see the document on [actions](actions.md#about-actions) and the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure)
 - A feed is used to configure an external event source to fire trigger events. 
 
 Every `nim` entity, including packages, belongs in a *namespace*, and the fully qualified name of an entity is `/namespaceName[/packageName]/entityName`. We follow the [OpenWhisk naming guidelines](./reference.md#openwhisk-entities).
