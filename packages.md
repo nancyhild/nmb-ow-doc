@@ -3,86 +3,84 @@
 You can use packages to bundle together a set of related actions and share them with others.
 
 A package can include *actions* and *feeds*.
-- An action is a piece of code that runs on OpenWhisk. For example, the Cloudant package includes actions to read and write records to a Cloudant database.
-- A feed is used to configure an external event source to fire trigger events. For example, the Alarm package includes a feed that can fire a trigger at a specified frequency.
+- An action is a piece of functional code that runs in the Nimbella cloud. Actions can be written in various source languages: JavaScript, Python, PHP, and so on. For details about actions, see the document on [actions](actions.md#about-actions) and the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure)
+- A feed is used to configure an external event source to fire trigger events. 
 
-Every OpenWhisk entity, including packages, belongs in a *namespace*, and the fully qualified name of an entity is `/namespaceName[/packageName]/entityName`. Refer to the [naming guidelines](./reference.md#openwhisk-entities) for more information.
+Every `nim` entity, including packages, belongs in a *namespace*, and the fully qualified name of an entity is `/namespaceName[/packageName]/entityName`. We follow the [OpenWhisk naming guidelines](./reference.md#openwhisk-entities).
 
-The following sections describe how to browse packages and use the triggers and feeds in them. In addition, if you are interested in contributing your own packages to the catalog, read the sections on creating and sharing packages.
+The following sections describe how to browse packages and use the triggers and feeds in them. 
 
 ## Browsing packages
 
-Several packages are registered with OpenWhisk. You can get a list of packages in a namespace, list the entities in a package, and get a description of the individual entities in a package.
+You can get a list of packages in a namespace, list the entities in a package, and get a description of the individual entities in a package.
 
-1. Get a list of packages in the `/whisk.system` namespace.
-
+1. Get a list of packages in the Nimbella `mynamespace` namespace.  
   ```
-  $ wsk package list /whisk.system
+  $ nim package list mynamespace
+    packages
+      /mynamespace/ocr                                                 shared
+      /mynamespace/utils                                               shared  
   ```
+2. Get a list of entities in the `ocr` package.  
   ```
-  packages
-  /whisk.system/cloudant                                                 shared
-  /whisk.system/alarms                                                   shared
-  /whisk.system/watson                                                   shared
-  /whisk.system/websocket                                                shared
-  /whisk.system/weather                                                  shared
-  /whisk.system/system                                                   shared
-  /whisk.system/utils                                                    shared
-  /whisk.system/slack                                                    shared
-  /whisk.system/samples                                                  shared
-  /whisk.system/github                                                   shared
-  /whisk.system/pushnotifications                                        shared
-  ```
-
-2. Get a list of entities in the `/whisk.system/cloudant` package.
-
-  ```
-  $ wsk package get --summary /whisk.system/cloudant
-  ```
-  ```
-  package /whisk.system/cloudant: Cloudant database service
-     (parameters: *apihost, *dbname, *host, overwrite, *password, *username)
-   action /whisk.system/cloudant/read: Read document from database
-     (parameters: dbname, id, params)
-   action /whisk.system/cloudant/write: Write document in database
+  $ nim package get /mynamespace/ocr
+    package /mynamespace/ocr: 
+       (parameters: *apihost, *dbname, *host, overwrite, *password, *username)
+    action /mynamespace/ocr/acceptImage: Read document from database
+       (parameters: dbname, id, params)
+    action /mynamespace/ocr/credential: ???
      (parameters: dbname, doc)
-   feed   /whisk.system/cloudant/changes: Database change feed
+     action /mynamespace/ocr/imageToText: ???
+      (parameters: dbname, doc)
+      action /mynamespace/ocr/progress: ???
+       (parameters: dbname, doc)
+       action /mynamespace/ocr/textToSpeech: ???
+        (parameters: dbname, doc)
+   feed   /mynamespace/ocr/: Database change feed
      (parameters: dbname, filter, query_params)
   ...
-  ```
-
-  **Note**: Parameters listed under the package with a prefix `*` are predefined, bound parameters. Parameters without a `*` are those listed under the [annotations](./annotations.md) for each entity. Furthermore, any parameters with the prefix `**` are finalized bound parameters. This means that they are immutable, and cannot be changed by the user. Any entity listed under a package inherits specific bound parameters from the package. To view the list of known parameters of an entity belonging to a package, you will need to run a `get --summary` of the individual entity.
-
-  This output shows that the Cloudant package provides the actions `read` and `write`, and the trigger feed called `changes`. The `changes` feed causes triggers to be fired when documents are added to the specified Cloudant database.
-
+  ```  
+  **Note**: Parameters listed under the package with a prefix `*` are predefined, bound parameters. Parameters without a `*` are those listed under the [annotations](./annotations.md) for each entity. Furthermore, any parameters with the prefix `**` are finalized bound parameters. This means that they are immutable, and cannot be changed by the user. Any entity listed under a package inherits specific bound parameters from the package. To view the list of known parameters of an entity belonging to a package, you will need to run a `get --summary` of the individual entity.  
+  This output shows that the `ocr` package provides the actions `read` and `write`, and the trigger feed called `changes`. The `changes` feed causes triggers to be fired when documents are added to the specified Cloudant database.  
   The Cloudant package also defines the parameters `username`, `password`, `host`, and `dbname`. These parameters must be specified for the actions and feeds to be meaningful. The parameters allow the actions to operate on a specific Cloudant account, for example.
 
-3. Get a description of the `/whisk.system/cloudant/read` action.
-
+3. Get a description of the `/mynamespace/ocr/acceptImage` action.  
   ```
-  $ wsk action get --summary /whisk.system/cloudant/read
-  ```
-  ```
-  action /whisk.system/cloudant/read: Read document from database
-     (parameters: *apihost, *dbname, *host, *id, params, *password, *username)
-  ```
+  $ nim action get /mynamespace/ocr/acceptImage
+  {
+    "mynamespace": ".../ocr",
+    "name": "acceptImage",
+    "version": "0.0.1",
+    ...
+    "annotations": [
+      {
+        "key": "deployer",
+        "value": {
+          "repository": "...",
+          "commit": "...",
+          "digest": "...",
+          "projectPath": "...",
+          "user": "..."
+          }
+        },
+        ...
+    ],
+    ...
+  }  ```
 
-  *NOTE*: Notice that the parameters listed for the action `read` were expanded upon from the action summary compared to the package summary above. To see the official bound parameters for actions and triggers listed under packages, run an individual get summary for the particular entity.
-
-  This output shows that the Cloudant `read` action lists eight parameters, seven of which are predefined. These include the database and document ID to retrieve.
-
+  The `annotations` details for the key `deployer` vary according to whether the deployed project is under git control.
 
 ## Invoking actions in a package
 
 You can invoke actions in a package, just as with other actions. The next few steps show how to invoke the `greeting` action in the `/whisk.system/samples` package with different parameters.
 
-1. Get a description of the `/whisk.system/samples/greeting` action.
+1. Get a description of the `/mynamespace/ocr/acceptImage` action.
 
   ```
-  $ wsk action get --summary /whisk.system/samples/greeting
+  $ wsk action get /mynamespace/ocr/acceptImage
   ```
   ```
-  action /whisk.system/samples/greeting: Returns a friendly greeting
+  action /mynamespace/ocr/acceptImage: Returns a friendly greeting
      (parameters: name, place)
   ```
 
