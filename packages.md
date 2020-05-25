@@ -3,10 +3,14 @@
 You can use packages to bundle together a set of related actions and share them with others.
 
 A package can include *actions* and *feeds*.
-- An action is a piece of functional code that runs in the Nimbella cloud. Actions can be written in various source languages: JavaScript, Python, PHP, and so on. For details about actions, see the document on [actions](actions.md#about-actions) and the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure)
-- A feed is used to configure an external event source to fire trigger events. 
 
-Every `nim` entity, including packages, belongs in a *namespace*, and the fully qualified name of an entity is `/namespaceName[/packageName]/entityName`. We follow the [OpenWhisk naming guidelines](./reference.md#openwhisk-entities).
+An _action_ is a piece of functional code that runs in the Nimbella cloud. Actions can be written in various source languages: JavaScript, Python, PHP, and so on. For details about actions, see the document on [actions](actions.md#about-actions) and the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure). 
+
+A _feed_ is used to configure an external event source to fire trigger events. 
+
+Every `nim` entity, including packages, belongs in a *namespace*, and the fully qualified name of an entity is `/my-namespace[/packageName]/entityName`, where `my-namespace` is the name of your Nimbella namespace. We follow the [OpenWhisk naming guidelines](./reference.md#openwhisk-entities).
+
+Tip: You can find the name of your namespace with the command `nim auth list`. If you have only one namespace, you can omit it from the package name for convenience.
 
 The following sections describe how to browse packages and use the triggers and feeds in them. 
 
@@ -14,73 +18,169 @@ The following sections describe how to browse packages and use the triggers and 
 
 You can get a list of packages in a namespace, list the entities in a package, and get a description of the individual entities in a package.
 
-1. Get a list of packages in the Nimbella `mynamespace` namespace.  
-  ```
-  $ nim package list mynamespace
-    packages
-      /mynamespace/ocr                                                 shared
-      /mynamespace/utils                                               shared  
-  ```
-2. Get a list of entities in the `ocr` package.  
-  ```
-  $ nim package get /mynamespace/ocr
-    package /mynamespace/ocr: 
-       (parameters: *apihost, *dbname, *host, overwrite, *password, *username)
-    action /mynamespace/ocr/acceptImage: Read document from database
-       (parameters: dbname, id, params)
-    action /mynamespace/ocr/credential: ???
-     (parameters: dbname, doc)
-     action /mynamespace/ocr/imageToText: ???
-      (parameters: dbname, doc)
-      action /mynamespace/ocr/progress: ???
-       (parameters: dbname, doc)
-       action /mynamespace/ocr/textToSpeech: ???
-        (parameters: dbname, doc)
-   feed   /mynamespace/ocr/: Database change feed
-     (parameters: dbname, filter, query_params)
-  ...
-  ```  
-  **Note**: Parameters listed under the package with a prefix `*` are predefined, bound parameters. Parameters without a `*` are those listed under the [annotations](./annotations.md) for each entity. Furthermore, any parameters with the prefix `**` are finalized bound parameters. This means that they are immutable, and cannot be changed by the user. Any entity listed under a package inherits specific bound parameters from the package. To view the list of known parameters of an entity belonging to a package, you will need to run a `get --summary` of the individual entity.  
-  This output shows that the `ocr` package provides the actions `read` and `write`, and the trigger feed called `changes`. The `changes` feed causes triggers to be fired when documents are added to the specified Cloudant database.  
-  The Cloudant package also defines the parameters `username`, `password`, `host`, and `dbname`. These parameters must be specified for the actions and feeds to be meaningful. The parameters allow the actions to operate on a specific Cloudant account, for example.
+Get a list of packages in the Nimbella `my-namespace` namespace:
 
-3. Get a description of the `/mynamespace/ocr/acceptImage` action.  
-  ```
-  $ nim action get /mynamespace/ocr/acceptImage
+```bash
+$ nim package list my-namespace
+
+Datetime        Access   Kind     Version  Packages                                          
+05/10 11:50:58  private  package  0.0.1    /my-namespace/demo                        
+05/07 10:41:53  private  package  0.0.1    /my-namespace/utils                       
+05/07 10:41:53  private  package  0.0.1    /my-namespace/ocr     
+```
+  
+Get a list of entities in the `demo` package, which has a single action called `hello`.
+
+```bash
+$ nim package get /my-namespace/demo
+
+{
+  "actions": [
+    {
+      "annotations": [
+        {
+          "key": "web-export",
+          "value": true
+        },
+        {
+          "key": "provide-api-key",
+          "value": false
+        },
+        {
+          "key": "exec",
+          "value": "nodejs:10"
+        }
+      ],
+      "name": "hello",
+      "version": "0.0.4"
+    }
+  ],
+  "annotations": [],
+  "binding": {},
+  "feeds": [],
+  "name": "demo",
+  "namespace": "my-naespace",
+  "parameters": [],
+  "publish": false,
+  "updated": 1589136658325,
+  "version": "0.0.1",
+  "date": "2020-05-10 11:50:58"
+}  
+```  
+**Notes**: 
+* Parameters listed under the package on the `"parameters"` line with a prefix `*` are predefined, bound parameters. Parameters without a `*` are listed under the [annotations](./annotations.md) for each entity. 
+* Any parameters with the prefix `**` are finalized bound parameters. This means that they are immutable and cannot be changed by the user. 
+* Any entity listed under a package inherits specific bound parameters from the package. To view the list of known parameters of an entity belonging to a package, a `get` of the individual entity. In this example, the command would be `nim action get demo/hello`.
+
+Get a description of the `/my-namespace/demo/hello` action.
+
+```
+  $ nim action get /my-namespace/demo/hello
   {
-    "mynamespace": ".../ocr",
-    "name": "acceptImage",
-    "version": "0.0.1",
-    ...
     "annotations": [
       {
-        "key": "deployer",
-        "value": {
-          "repository": "...",
-          "commit": "...",
-          "digest": "...",
-          "projectPath": "...",
-          "user": "..."
-          }
-        },
-        ...
+        "key": "web-export",
+        "value": true
+      },
+      {
+        "key": "provide-api-key",
+        "value": false
+      },
+      {
+        "key": "exec",
+        "value": "nodejs:10"
+      }
     ],
-    ...
-  }  ```
+    "exec": {
+      "kind": "nodejs:10",
+      "binary": false
+    },
+    "limits": {
+      "concurrency": 1,
+      "logs": 16,
+      "memory": 256,
+      "timeout": 3000
+    },
+    "name": "hello",
+    "namespace": "my-namespace/demo",
+    "parameters": [],
+    "publish": false,
+    "updated": 1589145786003,
+    "version": "0.0.4",
+    "date": "2020-05-10 14:23:06"
+  }  
+```
 
-  The `annotations` details for the key `deployer` vary according to whether the deployed project is under git control.
+**Note:** If the deployed project is under git control, the `annotations` section has details for the key `deployer`. For example, here's the output for the `acceptImage` action in the [Nimbella OCR demo project](https://github.com/nimbella/demo-projects/tree/master/ocr) running in `my-namespace`:
+
+```bash
+nim action get ocr/acceptImage
+
+{
+  "annotations": [
+    {
+      "key": "web-export",
+      "value": true
+    },
+    {
+      "key": "deployer",
+      "value": {
+        "commit": "04904569",
+        "digest": "9784aa8a",
+        "projectPath": "ocr",
+        "repository": "https://github.com/nimbella/demo-projects.git",
+        "user": "ghusername@example.com",
+        "zipped": false
+      }
+    },
+    {
+      "key": "raw-http",
+      "value": false
+    },
+    {
+      "key": "final",
+      "value": true
+    },
+    {
+      "key": "provide-api-key",
+      "value": false
+    },
+    {
+      "key": "exec",
+      "value": "nodejs:10"
+    }
+  ],
+  "exec": {
+    "kind": "nodejs:10",
+    "binary": false
+  },
+  "limits": {
+    "concurrency": 1,
+    "logs": 10,
+    "memory": 256,
+    "timeout": 60000
+  },
+  "name": "acceptImage",
+  "namespace": "my-namespace/ocr",
+  "parameters": [],
+  "publish": false,
+  "updated": 1588873314451,
+  "version": "0.0.1",
+  "date": "2020-05-07 10:41:54"
+}
+```
 
 ## Invoking actions in a package
 
 You can invoke actions in a package, just as with other actions. The next few steps show how to invoke the `greeting` action in the `/whisk.system/samples` package with different parameters.
 
-1. Get a description of the `/mynamespace/ocr/acceptImage` action.
+1. Get a description of the `/my-namespace/ocr/acceptImage` action.
 
   ```
-  $ wsk action get /mynamespace/ocr/acceptImage
+  $ wsk action get /my-namespace/ocr/acceptImage
   ```
   ```
-  action /mynamespace/ocr/acceptImage: Returns a friendly greeting
+  action /my-namespace/ocr/acceptImage: Returns a friendly greeting
      (parameters: name, place)
   ```
 
@@ -269,7 +369,7 @@ To create a custom package with a simple action in it, try the following example
   $ wsk package get --summary custom
   ```
   ```
-  package /myNamespace/custom
+  package /my-namespace/custom
      (parameters: none defined)
   ```
 
@@ -298,9 +398,9 @@ To create a custom package with a simple action in it, try the following example
   $ wsk package get --summary custom
   ```
   ```
-  package /myNamespace/custom
+  package /my-namespace/custom
     (parameters: none defined)
-   action /myNamespace/custom/identity
+   action /my-namespace/custom/identity
     (parameters: none defined)
   ```
 
@@ -427,10 +527,10 @@ Others can now use your `custom` package, including binding to the package or di
   $ wsk package get --summary custom
   ```
   ```
-  package /myNamespace/custom: Returns a result based on parameters city and country
+  package /my-namespace/custom: Returns a result based on parameters city and country
      (parameters: *city, *country)
-   action /myNamespace/custom/identity
+   action /my-namespace/custom/identity
      (parameters: none defined)
   ```
 
-  In the previous example, you're working with the `myNamespace` namespace, and this namespace appears in the fully qualified name.
+  In the previous example, you're working with the `my-namespace` namespace, and this namespace appears in the fully qualified name.

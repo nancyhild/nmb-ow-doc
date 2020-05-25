@@ -95,7 +95,6 @@ You can use this example function on your local system to create the action in y
 ```
 nim action create greeting path/to/greeting.js
 ```
-**[[NH: I got no output from this nim action create command in Mac terminal but when I do nim action get the action is in my namespace.]]**
 
 **Tip:** For convenience, you can omit the namespace when working with actions that belong to you. Also if there is no package, as in the previous example, use the action name without a package name. 
 
