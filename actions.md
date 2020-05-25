@@ -40,12 +40,12 @@ Here are languages and runtimes supported in the Nimbella Cloud, with links to m
 
 The Nimbella deployer determines the kind of runtime required for the action from the file suffix. The following runtimes are supported:
 
-* Node.js for suffix .js
-* Python for suffix .py
-* Java for suffixes .java and .jar
-* Swift suffix .swift
-* PHP for suffix .php
-* Go for suffix .go
+* Node.js for suffix _.js_
+* Python for suffix _.py_
+* Java for suffixes _.java_ and _.jar_
+* Swift suffix _.swift_
+* PHP for suffix _.php_
+* Go for suffix _.go_
 
 As an alternative, you can [create your own runtime](https://github.com/apache/openwhisk/blob/master/docs/actions-new.md).
 
@@ -95,18 +95,21 @@ You can use this example function on your local system to create the action in y
 ```
 nim action create greeting path/to/greeting.js
 ```
-**[[NH: I got no output from this nim action create command in Mac terminal but when I do nim action get the action is in my namespace.]]**
-
-**Tip:** For convenience, you can omit the namespace when working with actions that belong to you. Also if there is no package, as in the previous example, use the action name without a package name. 
+**Notes:** 
+* You can use subcommands with or without colons, for example `nim action:create` or `nim action create`.
+* For convenience, you can omit the namespace when working with actions that belong to you. 
+* If there is no package, as in the previous example, use the action name without a package name. 
+* The `nim action create` command has no output when successful.
 
 If you modify the code and want to update the action, use `nim action update`:
 
 ```
 nim action update greeting greeting.js
 ```
-**[[NH: No command output.]]**
 
-The `nim action create` and `nim action update` commands are the same in terms of their command-line parameters.
+**Notes:** 
+* The `nim action update` command has the same command-line parameters as `nim action create`.
+* The `nim action update` command has no output when successful.
 
 ## Invoke an action
 
@@ -150,23 +153,23 @@ Sometimes it's necessary or just convenient to provide values for function param
 Actions receive parameters as input with the following flag:
 
  ```
-   --param key value
+--param key value
 ```
 
 where `key` is the property name and `value` is any valid JSON value.
 
 The default output greeting from the `greeting` action is "Hello, stranger from somewhere!" This action accepts two optional input arguments, `name` and `place`, which can be used to tailor the response. Let's replace the words "stranger" and "somewhere" by passing parameters with different values:
 
-* `name`, with the value `"Dorothy"`
-* `place`, with the value `"Kansas"`
+* `name`, with the value `Dorothy`
+* `place`, with the value `Kansas`
 
 Here's how these parameters look in the `nim action invoke` command and its output:
 
 ```
 nim action invoke greeting --param name Dorothy --param place Kansas
-{
-  "msg": "Hello, Dorothy from Kansas!"
-}
+  {
+    "msg": "Hello, Dorothy from Kansas!"
+  }
 ```
 
 ### Bind parameters to actions
@@ -178,41 +181,40 @@ Here's an example.
 **Invoke the action to see the default values:**
 ```
 nim action invoke greeting
-{
-  "msg": "Hello, stranger from somewhere!"
-}
+  {
+    "msg": "Hello, stranger from somewhere!"
+  }
 ```
 
 **Use `nim action update` to bind a new value for the `name` property:**
 ```
 nim action update greeting --param name Toto
 ```
-**[[NH: No command output.]]**
 
 **Invoke the action to test the new value:**
 ```
 nim action invoke greeting
-{
-  "msg": "Hello, Toto from somewhere!"
-}
+  {
+    "msg": "Hello, Toto from somewhere!"
+  }
 ```
 
 Here's an example of using the --param flag for `place` when the `name` parameter has already been bound.
 
 ```
 nim action invoke greeting --param place Kansas
-{
-  "msg": "Hello, Toto from Kansas!"
-}
+  {
+    "msg": "Hello, Toto from Kansas!"
+  }
 ```
 
 You can override the bound parameter in any `nim action invoke` command:
 
 ```
 nim action invoke greeting --param place Kansas --param name Dorothy
-{
-  "msg": "Hello, Dorothy from Kansas!"
-}
+  {
+    "msg": "Hello, Dorothy from Kansas!"
+  }
 ```
 
 ## Action execution
@@ -278,60 +280,60 @@ To retrieve the activation record for a particular activation ID, use this comma
 
 ```
 nim activation get 7596b4c7eda544c896b4c7eda5b4c8c2
-{
-  "activationId": "7596b4c7eda544c896b4c7eda5b4c8c2",
-  "annotations": [
-    {
-      "key": "path",
-      "value": "<your-namespace>/greeting"
-    },
-    {
-      "key": "waitTime",
-      "value": 122
-    },
-    {
-      "key": "entry",
-      "value": "main"
-    },
-    {
-      "key": "kind",
-      "value": "nodejs:10"
-    },
-    {
-      "key": "timeout",
-      "value": false
-    },
-    {
-      "key": "limits",
-      "value": {
-        "concurrency": 1,
-        "logs": 10,
-        "memory": 256,
-        "timeout": 60000
+  {
+    "activationId": "7596b4c7eda544c896b4c7eda5b4c8c2",
+    "annotations": [
+      {
+        "key": "path",
+        "value": "<your-namespace>/greeting"
+      },
+      {
+        "key": "waitTime",
+        "value": 122
+      },
+      {
+        "key": "entry",
+        "value": "main"
+      },
+      {
+        "key": "kind",
+        "value": "nodejs:10"
+      },
+      {
+        "key": "timeout",
+        "value": false
+      },
+      {
+        "key": "limits",
+        "value": {
+          "concurrency": 1,
+          "logs": 10,
+          "memory": 256,
+          "timeout": 60000
+        }
       }
-    }
-  ],
-  "duration": 3,
-  "end": 1588961196282,
-  "logs": [
-    "2020-05-08T18:06:36.281795661Z stdout: params: { name: 'Toto' }"
-  ],
-  "name": "greeting",
-  "namespace": "<your-namespace>",
-  "publish": false,
-  "response": {
-    "result": {
-      "msg": "Hello, Toto from somewhere!"
+    ],
+    "duration": 3,
+    "end": 1588961196282,
+    "logs": [
+      "2020-05-08T18:06:36.281795661Z stdout: params: { name: 'Toto' }"
+    ],
+    "name": "greeting",
+    "namespace": "<your-namespace>",
+    "publish": false,
+    "response": {
+      "result": {
+        "msg": "Hello, Toto from somewhere!"
+      },
+      "size": 37,
+      "status": "success",
+      "success": true
     },
-    "size": 37,
-    "status": "success",
-    "success": true
-  },
-  "start": 1588961196279,
-  "subject": "me@examplemail.net",
-  "version": "0.0.3",
-  "date": "5/8/2020, 11:06:36 AM"
-}
+    "start": 1588961196279,
+    "subject": "me@examplemail.net",
+    "version": "0.0.3",
+    "date": "5/8/2020, 11:06:36 AM"
+  }
 ```
 
 The output includes the following fields:
@@ -341,11 +343,11 @@ The output includes the following fields:
 - `namespace` and `name`: Your Nimbella namespace and name of the entity.
 - `start` and `end`: Timestamps recording the start and end of the activation. The values are in [UNIX time format](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15).
 - `logs`: An array of strings with the logs that are produced by the action during its activation. Each array element corresponds to a line output to `stdout` or `stderr` by the action, and includes the time and stream of the log output. The structure is as follows: `TIMESTAMP` `STREAM:` `LOG LINE`.
-- `response`: A dictionary that defines the following keys
+- `response`: A dictionary that defines the following keys:
   - `status`: The activation result, which might be one of the following values:
-    - *"success"*: the action invocation completed successfully.
-    - *"application error"*: the action was invoked, but returned an error value on purpose, for instance because a precondition on the arguments was not met.
-    - *"action developer error"*: the action was invoked, but it completed abnormally, for instance the action did not detect an exception, or a syntax error existed. This status code is also returned under specific conditions such as:
+    - `success`: the action invocation completed successfully.
+    - `application error`: the action was invoked, but returned an error value on purpose, for instance because a precondition on the arguments was not met.
+    - `action developer error`: the action was invoked, but it completed abnormally, for instance the action did not detect an exception, or a syntax error existed. This status code is also returned under specific conditions such as:
       - the action failed to initialize for any reason
       - the action exceeded its time limit during the init or run phase
       - the action specified a wrong docker container name
@@ -367,8 +369,8 @@ Here are some common `nim activation` commands for viewing all or parts of the a
 
 - `nim activation list`: lists all activations. See the next section for a list of flags for this command.
 - `nim activation get --last`: retrieves the most recent activation record
-- `nim activation result <activationId>`: retrieves only the result of the activation (or use `--last` to get the most recent result).
-- `nim activation logs <activationId>`: retrieves only the logs of the activation.
+- `nim activation result <activationId>`: retrieves only the result of the activation (or use `--last` to get the most recent result). See the examples in the section [Asynchronous Requests](#asynchronous-requests).
+- `nim activation logs <activationId>`: retrieves only the logs of the activation specified.
 - `nim activation logs <activationId> --strip`: strips metadata from each log line so the logs are easier to read.
 
 #### `nim activation list` command flags
@@ -377,10 +379,10 @@ The `nim activation list` command lists all activations or activations filtered 
 
 | Flag | Short option | Description |
 | :--------- | :--- | :------- |
-| `--full` | `-f` | include full activation description |
-| `--limit LIMIT` | `-l` | only return LIMIT number of activations from the collection with a maximum LIMIT of 200 activations (default 30) |
-| `--since SINCE` | | return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970 |
-| `--skip SKIP` | `-s` | exclude the first SKIP number of activations from the result |
+| `--full` | `-f` | Include full activation description |
+| `--limit LIMIT` | `-l` | Only return LIMIT number of activations from the collection with a maximum LIMIT of 200 activations (default 30) |
+| `--since SINCE` | | Return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970 |
+| `--skip SKIP` | `-s` | Exclude the first SKIP number of activations from the result |
 | `--upto UPTO` | | Return activations with timestamps earlier than UPTO; measured in milliseconds since Th, 01, Jan 1970 |
 
 #### `nim activation list` example output
@@ -390,10 +392,10 @@ List the last three activations:
 ```
 nim activation list --limit 3
 
-Datetime        Status   Kind     Version  Activation ID                    Start Duration Entity                         
-05/08 11:05:27  success  nodejs   0.0.3    7596b4c7eda544c896b4c7eda5b4c8c2 warm  3ms      <your-namespace>/greeting 
-05/08 11:05:54  success  nodejs   0.0.3    12d95fa0ddd14840995fa0ddd1a840bd warm  3ms      <your-namespace>/greeting2 
-05/08 11:05:70  success  nodejs   0.0.3    d34af00e0cdf4ee78af00e0cdf2ee78a warm  3ms      <your-namespace>/greeting2 
+  Datetime        Status   Kind     Version  Activation ID                    Start Duration Entity                         
+  05/08 11:05:27  success  nodejs   0.0.3    7596b4c7eda544c896b4c7eda5b4c8c2 warm  3ms      <your-namespace>/greeting 
+  05/08 11:05:54  success  nodejs   0.0.3    12d95fa0ddd14840995fa0ddd1a840bd warm  3ms      <your-namespace>/greeting2 
+  05/08 11:05:70  success  nodejs   0.0.3    d34af00e0cdf4ee78af00e0cdf2ee78a warm  3ms      <your-namespace>/greeting2 
 ```
 
 Here's the meaning of each column in the list:
@@ -473,7 +475,7 @@ nim action get greeting --url
 
 A URL with the following format will be returned for standard actions:
 ```
-  action actionName
+  action ACTIONNAME
     https://${APIHOST}/api/v1/namespaces/${NAMESPACE}/actions/greeting
 ```
 
@@ -486,7 +488,6 @@ Any action may be exposed as a web action, using the `--web true` command line o
 ```
 nim action update greeting --web true
 ```
-**[[NH: No command output.]]**
 
 The resource URL for a web action is different:
 ```
@@ -507,17 +508,10 @@ curl `nim action get greeting --url | tail -1`.json
 Code associated with an existing action may be retrieved and saved locally. Saving can be performed on all actions except sequences and docker actions.
 
 1. Save action code to a filename that corresponds with an existing action name in the current working directory.  
-  The resulting file extension corresponds to the action kind. An extension of _.zip_ is used for action code that is a zip file.
-  ```
-  nim action get greeting --save
-  ```
-  **[[NH: No command output.]]**
+  The resulting file extension corresponds to the action kind. An extension of _.zip_ is used for action code that is a zip file.  
+  `nim action get greeting --save`
 2. Provide your own file name and extension by using the `--save-as` flag.  
-  ```
-  nim action get greeting --save-as hello.js
-  ```
-  **[[NH: No command output.]]**
-
+  `nim action get greeting --save-as hello.js`
 
 ### List actions
 
@@ -525,14 +519,14 @@ List all the actions that you have created with the following commnand:
 
 ```
 nim action list
-Datetime        Access   Kind     Version  Actions                                           
-05/07 11:05:33  web      nodejs   0.0.1    /<your-namespace>/greeting           
-05/07 10:05:46  web      nodejs   0.0.1    /<your-namespace>/ocr/progress                
-05/07 10:05:45  web      nodejs   0.0.1    /<your-namespace>/ocr/acceptImage             
-05/07 10:05:24  web      tessjs   0.0.1    /<your-namespace>/ocr/imageToText             
-05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/utils/slack                 
-05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/textToSpeech            
-05/07 10:05:24  web      nodejs   0.0.1    /ocr/credential 
+  Datetime        Access   Kind     Version  Actions                                           
+  05/07 11:05:33  web      nodejs   0.0.1    /<your-namespace>/greeting           
+  05/07 10:05:46  web      nodejs   0.0.1    /<your-namespace>/ocr/progress                
+  05/07 10:05:45  web      nodejs   0.0.1    /<your-namespace>/ocr/acceptImage             
+  05/07 10:05:24  web      tessjs   0.0.1    /<your-namespace>/ocr/imageToText             
+  05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/utils/slack                 
+  05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/textToSpeech            
+  05/07 10:05:24  web      nodejs   0.0.1    /ocr/credential 
 ```
 
 Actions are listed in order from most to least recently updated. In this example, the actions include the `greeting` action that we use for the examples in this article plus the actions in the [Nimbella OCR demo](https://github.com/nimbella/demo-projects/tree/master/ocr) that was deployed to our namespace.
@@ -541,14 +535,14 @@ For easier browsing, you can use the flag `--name-sort` or `-n` to sort the list
 
 ```
 nim action list --name-sort
-Datetime        Access   Kind     Version  Actions                                           
-05/07 10:05:45  web      nodejs   0.0.1    /<your-namespace>/ocr/acceptImage             
-05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/credential              
-05/08 12:05:86  web      nodejs   0.0.4    /<your-namespace>/greeting                   
-05/07 10:05:24  web      tessjs   0.0.1    /<your-namespace>/ocr/imageToText             
-05/07 10:05:46  web      nodejs   0.0.1    /<your-namespace>/ocr/progress                
-05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/utils/slack                 
-05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/textToSpeech            
+  Datetime        Access   Kind     Version  Actions                                           
+  05/07 10:05:45  web      nodejs   0.0.1    /<your-namespace>/ocr/acceptImage             
+  05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/credential              
+  05/08 12:05:86  web      nodejs   0.0.4    /<your-namespace>/greeting                   
+  05/07 10:05:24  web      tessjs   0.0.1    /<your-namespace>/ocr/imageToText             
+  05/07 10:05:46  web      nodejs   0.0.1    /<your-namespace>/ocr/progress                
+  05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/utils/slack                 
+  05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/textToSpeech            
 ```
 
 **Note**: The printed list is sorted alphabetically after it is received from the platform. Other list flags such as `--limit` and `--skip` are applied to the block of actions before they are received for sorting. To list actions in order by creation time, use the flag `--time`.
@@ -557,12 +551,12 @@ To filter your list of actions to just those within a specific package, use this
 
 ```
 nim action list ocr
-Datetime        Access   Kind     Version  Actions                                           
-05/07 10:05:46  web      nodejs   0.0.1    /<your-namespace>/ocr/progress                
-05/07 10:05:45  web      nodejs   0.0.1    /<your-namespace>/ocr/acceptImage             
-05/07 10:05:24  web      tessjs   0.0.1    /<your-namespace>/ocr/imageToText             
-05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/textToSpeech            
-05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/credential 
+  Datetime        Access   Kind     Version  Actions                                           
+  05/07 10:05:46  web      nodejs   0.0.1    /<your-namespace>/ocr/progress                
+  05/07 10:05:45  web      nodejs   0.0.1    /<your-namespace>/ocr/acceptImage             
+  05/07 10:05:24  web      tessjs   0.0.1    /<your-namespace>/ocr/imageToText             
+  05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/textToSpeech            
+  05/07 10:05:24  web      nodejs   0.0.1    /<your-namespace>/ocr/credential 
 ```
 
 ## Delete actions
@@ -570,20 +564,17 @@ Datetime        Access   Kind     Version  Actions
 You can clean up by deleting actions that you do not want to use.
 
 1. Run the following command to delete an action:  
-  ```
-  nim action delete greeting
-  ```
-  **[[NH: No command output.]]**
+  `nim action delete greeting`
 2. Verify that the action no longer appears in the list of actions.  
   ```
 nim action list
-  Datetime        Access   Kind     Version  Actions                                           
-  05/07 10:05:46  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/progress                
-  05/07 10:05:45  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/acceptImage             
-  05/07 10:05:24  web      tessjs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/imageToText             
-  05/07 10:05:24  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/utils/slack                 
-  05/07 10:05:24  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/textToSpeech            
-  05/07 10:05:24  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/credential   
+    Datetime        Access   Kind     Version  Actions                                           
+    05/07 10:05:46  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/progress                
+    05/07 10:05:45  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/acceptImage             
+    05/07 10:05:24  web      tessjs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/imageToText             
+    05/07 10:05:24  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/utils/slack                 
+    05/07 10:05:24  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/textToSpeech            
+    05/07 10:05:24  web      nodejs   0.0.1    /nancyhfa-ay4pqtfhp7t/ocr/credential   
   ```
 
 ## Access action metadata within the action body
@@ -609,11 +600,8 @@ You can use the `nim` CLI to watch the output of actions as they are invoked.
 
 1. Issue the following command from a shell:  
   `nim activation poll`  
-This command starts a polling loop that continuously checks for logs from activations.
+  This command starts a polling loop that continuously checks for logs from activations.
 2. Switch to another window and invoke an action:  
-  ```
-  nim action invoke greeting --param Toto
-  ```
-  **[[NH: No command output.]]**
+  `nim action invoke greeting --param Toto`
 3. Observe the activation log in the polling window.
 
