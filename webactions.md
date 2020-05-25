@@ -201,12 +201,12 @@ The request must specify its desired content type as one of the following: `.jso
 ```http 
 /my-namespace/demo/hello.http 
 ```
-  
-  For convenience, the `.http` extension is assumed when no extension is detected.
 
+See the [Content Extensions](#content-extensions) section.
+  
 ### Query and body parameters as input
 
-Besides parameters, he action can receive query parameters in the request body. 
+Besides parameters, the action can receive query parameters in the request body. 
 
 This is precedence order for merging parameters:
 * package parameters
@@ -416,24 +416,24 @@ $ nim action update /my-namespace/demo/hello hello.js --web false
 
 A web action can interpret and process an incoming HTTP body directly, without the promotion of a JSON object to first-class properties available to the action input (e.g., `args.name` versus parsing `args.__ow_query`). Use the `raw-http` annotation. See the [Apache OpenWhisk document on annotations](https://github.com/apache/openwhisk/blob/master/docs/annotations.md)). 
 
-Here's an example of a `curl` command for the previous web action example but modified to show a raw HTTP web action, receiving `name` both as a query parameter and as a JSON value in the HTTP request body.
+Here's an example of a `curl` command for the previous `hello/pmrs` web action example but modified to show a raw HTTP web action, receiving `name` both as a query parameter and as a JSON value in the HTTP request body.
 
 ```bash
-$ curl https://${APIHOST}/api/v1/web/my-namespace/demo/hello.json?name=Jane -X POST -H "Content-Type: application/json" -d '{"name":"Jane"}'
+$ curl https://${APIHOST}/api/v1/web/my-namespace/demo/prms.json?name=Jane -X POST -H "Content-Type: application/json" -d '{"name":"Jane"}'
+
 {
   "response": {
-    "__ow_method": "post",
-    "__ow_query": "name=Jane",
-    "__ow_body": "eyJuYW1lIjoiSmFuZSJ9",
     "__ow_headers": {
       "accept": "*/*",
       "connection": "close",
-      "content-length": "15",
       "content-type": "application/json",
-      "host": "172.17.0.1",
-      "user-agent": "curl/7.43.0"
+      "host": "ccontroller",
+      "user-agent": "curl/7.64.1",
+      "x-request-id": "50544d62b655c858822d0c00df75c140"
     },
-    "__ow_path": ""
+    "__ow_method": "post",
+    "__ow_path": "",
+    "name": "Jane"
   }
 }
 ```
@@ -516,7 +516,7 @@ function main(array $args) : array
 }
 ```
 
-As an example, save the `Node` function as `decode.js` and execute the following commands:
+For example, save the `Node` function as `decode.js` and execute the following commands:
 
 ```bash
 $ nim action create decode decode.js --web raw
@@ -536,8 +536,9 @@ Access-Control-Allow-Methods: OPTIONS, GET, DELETE, POST, PUT, HEAD, PATCH
 Access-Control-Allow-Headers: Authorization, Origin, X-Requested-With, Content-Type, Accept, User-Agent
 ```
 
-Alternatively, OPTIONS requests can be handled manually by a web action. To enable this option, add a `web-custom-options` annotation with a value of `true` to a web action. When this feature is enabled, CORS headers are not automatically added to the request response. Instead, it is the developer's responsibility to append their
-desired headers programmatically. Below is an example of creating custom responses to OPTIONS requests.
+Alternatively, OPTIONS requests can be handled manually by a web action. To enable this option, add a `web-custom-options` annotation with a value of `true` to a web action. When this feature is enabled, CORS headers are not automatically added to the request response. Instead, it is the developer's responsibility to append their desired headers programmatically. 
+
+Here's an example of creating custom responses to OPTIONS requests.
 
 ```javascript
 function main(params) {
@@ -558,17 +559,18 @@ Save this function to _custom-options.js_ and execute the following commands:
 ```bash
 $ nim action create custom-option custom-options.js --web true -a web-custom-options true
 $ curl https://${APIHOST}/api/v1/web/automatically/default/custom-options.http -kvX OPTIONS
-< HTTP/1.1 200 OK
-< Server: nginx/1.11.13
-< Content-Length: 0
-< Connection: keep-alive
-< Access-Control-Allow-Methods: OPTIONS, GET
-< Access-Control-Allow-Origin: example.com
+
+  < HTTP/1.1 200 OK
+  < Server: nginx/1.11.13
+  < Content-Length: 0
+  < Connection: keep-alive
+  < Access-Control-Allow-Methods: OPTIONS, GET
+  < Access-Control-Allow-Origin: example.com
 ```
 
 ## Web Actions in Shared Packages
 
-A web action in a shared (i.e., public) package is accessible as a web action either directly via the package's fully qualified name, or via a package binding.
+A web action in a shared (public) package is accessible as a web action either directly via the package's fully qualified name, or via a package binding.
 
 **Important:** A web action in a public package is accessible for all bindings of the package even if the binding is private. This is because the web action annotation is carried on the action and cannot be overridden. If you don't want to expose a web action through your package bindings, clone-and-own the package instead.
 
