@@ -207,7 +207,7 @@ nim action invoke demo/greeting
 }
 ```
 
-Now invoke the action by passing different parameter values for `name` and `place` from the commnand line.
+Now invoke the action by passing different parameter values for `name` and `place` from the command line.
 
 ```bash
 nim action invoke demo/greeting --param name Mark --param place Ork
@@ -219,7 +219,7 @@ nim action invoke demo/greeting --param name Mark --param place Ork
 
 ## Creating and using package bindings
 
-Instead of passing the same parameters to the action every timey, you can bind to a package and specify default parameters. These parameters are inherited by the actions in the package.
+Instead of passing the same parameters to the action every time, you can bind to a package and specify default parameters. These parameters are inherited by the actions in the package.
 
 For example, in the `demo/greeting` package, you can set default `name` and `place` values in a package binding and these values are automatically passed to any actions in the package.
 
@@ -229,7 +229,7 @@ The following example sets a default `place` parameter value to the `demo` packa
 nim package bind demo demoPlace --param place Mumbai
 ```
 
-Now get a description of the package binding. In the following example, the `package get` command shows the annotations for the `demo` package and all its actions (in this case there's only one, the `greeting` action). It also shows the binding on the package with the key value pair for the `place` parameter.
+Now get a description of the package binding. In the following example, the `package get` command shows the annotations for the `demo` package and all its actions (in this case there's only one, the `greeting` action). It also shows the binding on the package with the key-value pair for the `place` parameter.
 
 ```bash
 nim package get demoPlace
@@ -280,7 +280,6 @@ nim package get demoPlace
 }
 ```
 
-
 Now you can invoke an action using the bound package name:
 
 ```bash
@@ -321,89 +320,19 @@ nim action invoke demoPlace/greeting
 }
 ```
 
-## Creating and using trigger feeds
-
-Feeds offer a convenient way to configure an external event source to fire these events to a trigger. This example shows how to use a feed in the Alarms package to fire a trigger every second, and how to use a rule to invoke an action every second.
-
-1. Get a description of the feed in the `/whisk.system/alarms` package.
-
-  ```
-  $ wsk package get --summary /whisk.system/alarms
-  ```
-  ```
-  package /whisk.system/alarms: Alarms and periodic utility
-     (parameters: *apihost, *cron, *trigger_payload)
-   feed   /whisk.system/alarms/alarm: Fire trigger when alarm occurs
-      (parameters: none defined)
-  ```
-
-  ```
-  $ wsk action get --summary /whisk.system/alarms/alarm
-  ```
-  ```
-  action /whisk.system/alarms/alarm: Fire trigger when alarm occurs
-     (parameters: *apihost, *cron, *trigger_payload)
-  ```
-
-  The `/whisk.system/alarms/alarm` feed takes two parameters:
-  - `cron`: A crontab specification of when to fire the trigger.
-  - `trigger_payload`: The payload parameter value to set in each trigger event.
-  - `apihost`: The API host endpoint that will be receiving the feed.
-
-2. Create a trigger that fires every eight seconds.
-
-  ```
-  $ wsk trigger create everyEightSeconds --feed /whisk.system/alarms/alarm -p cron "*/8 * * * * *" -p trigger_payload "{\"name\":\"Mork\", \"place\":\"Ork\"}"
-  ```
-  ```
-  ok: created trigger feed everyEightSeconds
-  ```
-
-3. Create a 'hello.js' file with the following action code.
-
-  ```
-  function main(params) {
-      return {payload:  'Hello, ' + params.name + ' from ' + params.place};
-  }
-  ```
-
-4. Make sure that the action exists.
-
-  ```
-  $ wsk action update hello hello.js
-  ```
-
-5. Create a rule that invokes the `hello` action every time the `everyEightSeconds` trigger fires.
-
-  ```
-  $ wsk rule create myRule everyEightSeconds hello
-  ```
-  ```
-  ok: created rule myRule
-  ```
-
-6. Check that the action is being invoked by polling for activation logs.
-
-  ```
-  $ wsk activation poll
-  ```
-
-  You should see activations every eight seconds for the trigger, the rule, and the action. The action receives the parameters `{"name":"Mork", "place":"Ork"}` on every invocation.
-
-
 ## Creating a package
 
 A package is used to organize a set of related actions and feeds.
 It also allows for parameters to be shared across all entities in the package.
 
-To create a custom package with a simple action in it, try the following example:
+To create a custom package that contains a simple action, try the following example:
 
 1. Create a package called "custom".  
   ```bash
   $ nim package create custom
   ```
 2. Get a summary of the package.  
-  ```
+  ```bash
   nim package get custom
   
   {
@@ -423,19 +352,19 @@ To create a custom package with a simple action in it, try the following example
 
   Notice that the package is empty.
 
-3. Create a file called `identity.js` that contains the following action code. This action returns all input parameters.
+3. Create a file called _identity.js_ that contains the following action code. This action returns all input parameters.
 
-  ```JavaScript
+  ```js
   function main(args) { return args; }
   ```
 4. Create an `identity` action in the `custom` package.  
-  ```
+  ```bash
   $ nim action create custom/identity identity.js
   ```  
   Creating an action in a package requires that you prefix the action name with a package name. Package nesting is not allowed. A package can contain only actions and can't contain another package.
 
-5. Get a summary of the package again.  
-  ```
+5. Get a summary of the package again. Now you can see the `identity` action listed.  
+  ```bash
   nim package get custom
   
   {
@@ -467,7 +396,7 @@ To create a custom package with a simple action in it, try the following example
     "date": "2020-05-25 15:56:27"
   }  
   ```
-  You can see the `custom/identity` action in your namespace now.
+
 6. Invoke the action in the package.
   ```bash
   nim action invoke custom/identity  
@@ -475,7 +404,7 @@ To create a custom package with a simple action in it, try the following example
     {}
   ```
 
-
+### Set default parameters
 You can set default parameters for all the entities in a package by setting package-level parameters that are inherited by all actions in the package. To see how this works, try the following example:
 
 1. Update the `custom` package with two parameters: `city` and `country`.
@@ -578,7 +507,7 @@ You can set default parameters for all the entities in a package by setting pack
     "country": "USA"
   }
     ```
-5. Invoke the identity action with some parameters. Invocation parameters are merged with the package parameters and the invocation parameters override the package parameters.
+5. Invoke the `identity` action with some parameters. Invocation parameters are merged with the package parameters and the invocation parameters override the package parameters.
   ```bash
   nim action invoke --result custom/identity --param city Dallas --param state Texas
 
@@ -597,7 +526,7 @@ After the actions and feeds that comprise a package are debugged and tested, the
   ```bash
   $ nim package update custom --shared yes
   ```
-2. Verify that the `publish` property of the package that it's now true.  
+2. Verify that the `publish` property of the package is now true.  
   ```bash
   $ nim package get custom
   
@@ -643,5 +572,76 @@ After the actions and feeds that comprise a package are debugged and tested, the
 Others can now use your `custom` package, including binding to the package or directly invoking an action in it but they must use the fully qualified name of the package to bind it or invoke actions in it. 
 
 **Note:** Actions and feeds within a shared package are _public_. If the package is private, then all of its contents are also private.
+
+## Creating and using trigger feeds
+
+**[[NH: I don't know what to do with this section. I see that `nim` has `trigger` and `rule` commands to manage entities, but I also see this statement in the CLI guide: "OpenWhisk has additional entities called rules, triggers, routes (aka “API gateway”), and activations; the nim command supports these individually but not as part of a project." I can't find any nim-specific documentation on triggers. I can't find anything in the Nimbella repos on GitHub that matches `/whisk.system/alarms`, so I don't know if you can import the OW package.]]**
+
+Feeds offer a convenient way to configure an external event source to fire these events to a trigger. This example shows how to use a feed in the Alarms package to fire a trigger every second, and how to use a rule to invoke an action every second.
+
+1. Get a description of the feed in the `/whisk.system/alarms` package.
+
+  ```
+  $ wsk package get --summary /whisk.system/alarms
+  ```
+  ```
+  package /whisk.system/alarms: Alarms and periodic utility
+     (parameters: *apihost, *cron, *trigger_payload)
+   feed   /whisk.system/alarms/alarm: Fire trigger when alarm occurs
+      (parameters: none defined)
+  ```
+
+  ```
+  $ wsk action get --summary /whisk.system/alarms/alarm
+  ```
+  ```
+  action /whisk.system/alarms/alarm: Fire trigger when alarm occurs
+     (parameters: *apihost, *cron, *trigger_payload)
+  ```
+
+  The `/whisk.system/alarms/alarm` feed takes two parameters:
+  - `cron`: A crontab specification of when to fire the trigger.
+  - `trigger_payload`: The payload parameter value to set in each trigger event.
+  - `apihost`: The API host endpoint that will be receiving the feed.
+
+2. Create a trigger that fires every eight seconds.
+
+  ```
+  $ wsk trigger create everyEightSeconds --feed /whisk.system/alarms/alarm -p cron "*/8 * * * * *" -p trigger_payload "{\"name\":\"Mork\", \"place\":\"Ork\"}"
+  ```
+  ```
+  ok: created trigger feed everyEightSeconds
+  ```
+
+3. Create a 'hello.js' file with the following action code.
+
+  ```
+  function main(params) {
+      return {payload:  'Hello, ' + params.name + ' from ' + params.place};
+  }
+  ```
+
+4. Make sure that the action exists.
+
+  ```
+  $ wsk action update hello hello.js
+  ```
+
+5. Create a rule that invokes the `hello` action every time the `everyEightSeconds` trigger fires.
+
+  ```
+  $ wsk rule create myRule everyEightSeconds hello
+  ```
+  ```
+  ok: created rule myRule
+  ```
+
+6. Check that the action is being invoked by polling for activation logs.
+
+  ```
+  $ wsk activation poll
+  ```
+
+  You should see activations every eight seconds for the trigger, the rule, and the action. The action receives the parameters `{"name":"Mork", "place":"Ork"}` on every invocation.
 
 
