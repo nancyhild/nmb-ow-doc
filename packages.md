@@ -3,10 +3,14 @@
 You can use packages to bundle together a set of related actions and share them with others.
 
 A package can include *actions* and *feeds*.
-- An action is a piece of functional code that runs in the Nimbella cloud. Actions can be written in various source languages: JavaScript, Python, PHP, and so on. For details about actions, see the document on [actions](actions.md#about-actions) and the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure)
-- A feed is used to configure an external event source to fire trigger events. 
 
-Every `nim` entity, including packages, belongs in a *namespace*, and the fully qualified name of an entity is `/namespaceName[/packageName]/entityName`. We follow the [OpenWhisk naming guidelines](./reference.md#openwhisk-entities).
+An _action_ is a piece of functional code that runs in the Nimbella cloud. Actions can be written in various source languages: JavaScript, Python, PHP, and so on. For details about actions, see the document on [actions](actions.md#about-actions) and the [Nimbella Command Line Tool Guide](https://nimbella.io/downloads/nim/nim.html#project-directory-structure). 
+
+A _feed_ is used to configure an external event source to fire trigger events. 
+
+Every `nim` entity, including packages, belongs in a *namespace*, and the fully qualified name of an entity is `/my-namespace[/packageName]/entityName`, where `my-namespace` is the name of your Nimbella namespace. We follow the [OpenWhisk naming guidelines](./reference.md#openwhisk-entities).
+
+Tip: You can find the name of your namespace with the command `nim auth list`. If you have only one namespace, you can omit it from the package name for convenience.
 
 The following sections describe how to browse packages and use the triggers and feeds in them. 
 
@@ -14,172 +18,566 @@ The following sections describe how to browse packages and use the triggers and 
 
 You can get a list of packages in a namespace, list the entities in a package, and get a description of the individual entities in a package.
 
-1. Get a list of packages in the Nimbella `mynamespace` namespace.  
-  ```
-  $ nim package list mynamespace
-    packages
-      /mynamespace/ocr                                                 shared
-      /mynamespace/utils                                               shared  
-  ```
-2. Get a list of entities in the `ocr` package.  
-  ```
-  $ nim package get /mynamespace/ocr
-    package /mynamespace/ocr: 
-       (parameters: *apihost, *dbname, *host, overwrite, *password, *username)
-    action /mynamespace/ocr/acceptImage: Read document from database
-       (parameters: dbname, id, params)
-    action /mynamespace/ocr/credential: ???
-     (parameters: dbname, doc)
-     action /mynamespace/ocr/imageToText: ???
-      (parameters: dbname, doc)
-      action /mynamespace/ocr/progress: ???
-       (parameters: dbname, doc)
-       action /mynamespace/ocr/textToSpeech: ???
-        (parameters: dbname, doc)
-   feed   /mynamespace/ocr/: Database change feed
-     (parameters: dbname, filter, query_params)
-  ...
-  ```  
-  **Note**: Parameters listed under the package with a prefix `*` are predefined, bound parameters. Parameters without a `*` are those listed under the [annotations](./annotations.md) for each entity. Furthermore, any parameters with the prefix `**` are finalized bound parameters. This means that they are immutable, and cannot be changed by the user. Any entity listed under a package inherits specific bound parameters from the package. To view the list of known parameters of an entity belonging to a package, you will need to run a `get --summary` of the individual entity.  
-  This output shows that the `ocr` package provides the actions `read` and `write`, and the trigger feed called `changes`. The `changes` feed causes triggers to be fired when documents are added to the specified Cloudant database.  
-  The Cloudant package also defines the parameters `username`, `password`, `host`, and `dbname`. These parameters must be specified for the actions and feeds to be meaningful. The parameters allow the actions to operate on a specific Cloudant account, for example.
+Get a list of packages in the Nimbella `my-namespace` namespace:
 
-3. Get a description of the `/mynamespace/ocr/acceptImage` action.  
-  ```
-  $ nim action get /mynamespace/ocr/acceptImage
+```bash
+$ nim package list my-namespace
+
+Datetime        Access   Kind     Version  Packages                                          
+05/10 11:50:58  private  package  0.0.1    /my-namespace/demo                        
+05/07 10:41:53  private  package  0.0.1    /my-namespace/utils                       
+05/07 10:41:53  private  package  0.0.1    /my-namespace/ocr     
+```
+  
+Get a list of entities in the `demo` package, which has a single action called `hello`.
+
+```bash
+$ nim package get /my-namespace/demo
+
+{
+  "actions": [
+    {
+      "annotations": [
+        {
+          "key": "web-export",
+          "value": true
+        },
+        {
+          "key": "provide-api-key",
+          "value": false
+        },
+        {
+          "key": "exec",
+          "value": "nodejs:10"
+        }
+      ],
+      "name": "hello",
+      "version": "0.0.4"
+    }
+  ],
+  "annotations": [],
+  "binding": {},
+  "feeds": [],
+  "name": "demo",
+  "namespace": "my-naespace",
+  "parameters": [],
+  "publish": false,
+  "updated": 1589136658325,
+  "version": "0.0.1",
+  "date": "2020-05-10 11:50:58"
+}  
+```  
+**Notes**: 
+* Parameters listed under the package on the `"parameters"` line with a prefix `*` are predefined, bound parameters. Parameters without a `*` are listed under the [annotations](./annotations.md) for each entity. 
+* Any parameters with the prefix `**` are finalized bound parameters. This means that they are immutable and cannot be changed by the user. 
+* Any entity listed under a package inherits specific bound parameters from the package. To view the list of known parameters of an entity belonging to a package, a `get` of the individual entity. In this example, the command would be `nim action get demo/hello`.
+
+Get a description of the `/my-namespace/demo/hello` action.
+
+```
+  $ nim action get /my-namespace/demo/hello
   {
-    "mynamespace": ".../ocr",
-    "name": "acceptImage",
-    "version": "0.0.1",
-    ...
     "annotations": [
       {
-        "key": "deployer",
-        "value": {
-          "repository": "...",
-          "commit": "...",
-          "digest": "...",
-          "projectPath": "...",
-          "user": "..."
-          }
-        },
-        ...
+        "key": "web-export",
+        "value": true
+      },
+      {
+        "key": "provide-api-key",
+        "value": false
+      },
+      {
+        "key": "exec",
+        "value": "nodejs:10"
+      }
     ],
-    ...
-  }  ```
+    "exec": {
+      "kind": "nodejs:10",
+      "binary": false
+    },
+    "limits": {
+      "concurrency": 1,
+      "logs": 16,
+      "memory": 256,
+      "timeout": 3000
+    },
+    "name": "hello",
+    "namespace": "my-namespace/demo",
+    "parameters": [],
+    "publish": false,
+    "updated": 1589145786003,
+    "version": "0.0.4",
+    "date": "2020-05-10 14:23:06"
+  }  
+```
 
-  The `annotations` details for the key `deployer` vary according to whether the deployed project is under git control.
+**Note:** If the deployed project is under git control, the `annotations` section has details for the key `deployer`. For example, here's the output for the `acceptImage` action in the [Nimbella OCR demo project](https://github.com/nimbella/demo-projects/tree/master/ocr) running in `my-namespace`:
+
+```bash
+nim action get ocr/acceptImage
+
+{
+  "annotations": [
+    {
+      "key": "web-export",
+      "value": true
+    },
+    {
+      "key": "deployer",
+      "value": {
+        "commit": "04904569",
+        "digest": "9784aa8a",
+        "projectPath": "ocr",
+        "repository": "https://github.com/nimbella/demo-projects.git",
+        "user": "ghusername@example.com",
+        "zipped": false
+      }
+    },
+    {
+      "key": "raw-http",
+      "value": false
+    },
+    {
+      "key": "final",
+      "value": true
+    },
+    {
+      "key": "provide-api-key",
+      "value": false
+    },
+    {
+      "key": "exec",
+      "value": "nodejs:10"
+    }
+  ],
+  "exec": {
+    "kind": "nodejs:10",
+    "binary": false
+  },
+  "limits": {
+    "concurrency": 1,
+    "logs": 10,
+    "memory": 256,
+    "timeout": 60000
+  },
+  "name": "acceptImage",
+  "namespace": "my-namespace/ocr",
+  "parameters": [],
+  "publish": false,
+  "updated": 1588873314451,
+  "version": "0.0.1",
+  "date": "2020-05-07 10:41:54"
+}
+```
 
 ## Invoking actions in a package
 
-You can invoke actions in a package, just as with other actions. The next few steps show how to invoke the `greeting` action in the `/whisk.system/samples` package with different parameters.
+You can invoke actions in a package, just as with other actions. Here are a few simple examples using the `greeting` action in the [Actions article](actions.md). First let's get the source code for the `/my-namespace/demo/greeting` action. For these examples, we won't use the fully qualified action name but instead omit the namespace and use just the `package/action` format.
 
-1. Get a description of the `/mynamespace/ocr/acceptImage` action.
+```bash
+nim action get demo/greeting --code
+/**
+ * @params is a JSON object with optional fields "name" and "place".
+ * @return a JSON object containing the message in a field called "msg".
+ */
+function main(params) {
+  // log the parameters to stdout
+  console.log('params:', params);
 
-  ```
-  $ wsk action get /mynamespace/ocr/acceptImage
-  ```
-  ```
-  action /mynamespace/ocr/acceptImage: Returns a friendly greeting
-     (parameters: name, place)
-  ```
+  // if a value for name is provided, use it else use a default
+  var name = params.name || 'stranger';
 
-  Notice that the `greeting` action takes two parameters: `name` and `place`.
+  // if a value for place is provided, use it else use a default
+  var place = params.place || 'somewhere';
 
-2. Invoke the action without any parameters.
+  // construct the message using the values for name and place
+  return {msg:  'Hello, ' + name + ' from ' + place + '!'};
+}
+```
 
-  ```
-  $ wsk action invoke --result /whisk.system/samples/greeting
-  ```
-  ```
-  {
-      "payload": "Hello, stranger from somewhere!"
-  }
-  ```
+You can see there are two parameters, `name` and `place`.
 
-  The output is a generic message because no parameters were specified.
+Now invoke the action.
 
-3. Invoke the action with parameters.
+```bash
+nim action invoke demo/greeting
 
-  ```
-  $ wsk action invoke --result /whisk.system/samples/greeting --param name Mork --param place Ork
-  ```
-  ```
-  {
-      "payload": "Hello, Mork from Ork!"
-  }
-  ```
+{
+  "msg": "Hello, stranger from somewhere!"
+}
+```
 
-  Notice that the output uses the `name` and `place` parameters that were passed to the action.
+Now invoke the action by passing different parameter values for `name` and `place` from the command line.
 
+```bash
+nim action invoke demo/greeting --param name Mark --param place Ork
+
+{
+  "msg": "Hello, Mark from Ork!"
+}
+```
 
 ## Creating and using package bindings
 
-Although you can use the entities in a package directly, you might find yourself passing the same parameters to the action every time. You can avoid this by binding to a package and specifying default parameters. These parameters are inherited by the actions in the package.
+Instead of passing the same parameters to the action every time, you can bind to a package and specify default parameters. These parameters are inherited by the actions in the package.
 
-For example, in the `/whisk.system/cloudant` package, you can set default `username`, `password`, and `dbname` values in a package binding and these values are automatically passed to any actions in the package.
+For example, in the `demo/greeting` package, you can set default `name` and `place` values in a package binding and these values are automatically passed to any actions in the package.
 
-In the following simple example, you bind to the `/whisk.system/samples` package.
+The following example sets a default `place` parameter value to the `demo` package. The `nim package bind` syntax requires the name of the package and a bound package name. In this case we'll call the bound package name `demoPlace`. 
 
-1. Bind to the `/whisk.system/samples` package and set a default `place` parameter value.
+```bash
+nim package bind demo demoPlace --param place Mumbai
+```
 
-  ```
-  $ wsk package bind /whisk.system/samples valhallaSamples --param place Valhalla
-  ```
-  ```
-  ok: created binding valhallaSamples
-  ```
+Now get a description of the package binding. In the following example, the `package get` command shows the annotations for the `demo` package and all its actions (in this case there's only one, the `greeting` action). It also shows the binding on the package with the key-value pair for the `place` parameter.
 
-2. Get a description of the package binding.
+```bash
+nim package get demoPlace
 
-  ```
-  $ wsk package get --summary valhallaSamples
-  ```
-  ```
-  package /namespace/valhallaSamples: Returns a result based on parameter place
-     (parameters: *place)
-   action /namespace/valhallaSamples/helloWorld: Demonstrates logging facilities
-      (parameters: payload)
-   action /namespace/valhallaSamples/greeting: Returns a friendly greeting
-      (parameters: name, place)
-   action /namespace/valhallaSamples/curl: Curl a host url
-      (parameters: payload)
-   action /namespace/valhallaSamples/wordCount: Count words in a string
-      (parameters: payload)
-  ```
+{
+  "actions": [
+    {
+      "annotations": [
+        {
+          "key": "provide-api-key",
+          "value": false
+        },
+        {
+          "key": "exec",
+          "value": "nodejs:10"
+        }
+      ],
+      "name": "greeting",
+      "version": "0.0.1"
+    },
+  ],
+  "annotations": [
+    {
+      "key": "binding",
+      "value": {
+        "name": "demo",
+        "namespace": "my-namespace"
+      }
+    }
+  ],
+  "binding": {
+    "name": "demo",
+    "namespace": "my-namespace"
+  },
+  "feeds": [],
+  "name": "demoPlace",
+  "namespace": "my-namespace",
+  "parameters": [
+    {
+      "key": "place",
+      "value": "Mumbai"
+    }
+  ],
+  "publish": false,
+  "updated": 1590443251826,
+  "version": "0.0.1",
+  "date": "2020-05-25 14:47:31"
+}
+```
 
-  Notice that all the actions in the `/whisk.system/samples` package are available in the `valhallaSamples` package binding.
+Now you can invoke an action using the bound package name:
 
-3. Invoke an action in the package binding.
+```bash
+nim action invoke demoPlace/greeting
 
+{
+  "msg": "Hello, stranger from Mumbai!"
+}
+```
+
+You can define the name parameter at the command line:
+
+```bash
+nim action invoke demoPlace/greeting --param name Sanjay
+
+{
+  "msg": "Hello, Sanjay from Mumbai!"
+}
+```
+
+You can see that the action inherits the `place` parameter you set when you created the `demoPlace` package binding. The following command temporarily overrides the default parameter value.
+
+```bash
+nim action invoke demoPlace/greeting --param name Natasha --param place Russia
+
+{
+  "msg": "Hello, Natasha from Russia!"
+}
+```
+
+Now if you invoke the `demoPlace/greeting` action, you'll see the place parameter has returned to its bound value:
+
+```bash
+nim action invoke demoPlace/greeting
+
+{
+  "msg": "Hello, stranger from Mumbai!"
+}
+```
+
+## Creating a package
+
+A package is used to organize a set of related actions and feeds.
+It also allows for parameters to be shared across all entities in the package.
+
+To create a custom package that contains a simple action, try the following example:
+
+1. Create a package called "custom".  
+  ```bash
+  $ nim package create custom
   ```
-  $ wsk action invoke --result valhallaSamples/greeting --param name Odin
-  ```
-  ```
+2. Get a summary of the package.  
+  ```bash
+  nim package get custom
+  
   {
-      "payload": "Hello, Odin from Valhalla!"
+    "actions": [],
+    "annotations": [],
+    "binding": {},
+    "feeds": [],
+    "name": "custom",
+    "namespace": "my-namespace",
+    "parameters": [],
+    "publish": false,
+    "updated": 1590447387087,
+    "version": "0.0.1",
+    "date": "2020-05-25 15:56:27"
   }
   ```
 
-  Notice from the result that the action inherits the `place` parameter you set when you created the `valhallaSamples` package binding.
+  Notice that the package is empty.
 
-4. Invoke an action and overwrite the default parameter value.
+3. Create a file called _identity.js_ that contains the following action code. This action returns all input parameters.
 
+  ```js
+  function main(args) { return args; }
   ```
-  $ wsk action invoke --result valhallaSamples/greeting --param name Odin --param place Asgard
-  ```
-  ```
+4. Create an `identity` action in the `custom` package.  
+  ```bash
+  $ nim action create custom/identity identity.js
+  ```  
+  Creating an action in a package requires that you prefix the action name with a package name. Package nesting is not allowed. A package can contain only actions and can't contain another package.
+
+5. Get a summary of the package again. Now you can see the `identity` action listed.  
+  ```bash
+  nim package get custom
+  
   {
-      "payload": "Hello, Odin from Asgard!"
+    "actions": [
+      {
+        "annotations": [
+          {
+            "key": "provide-api-key",
+            "value": false
+          },
+          {
+            "key": "exec",
+            "value": "nodejs:10"
+          }
+        ],
+        "name": "identity",
+        "version": "0.0.1"
+      }
+    ],
+    "annotations": [],
+    "binding": {},
+    "feeds": [],
+    "name": "custom",
+    "namespace": "my-namespace",
+    "parameters": [],
+    "publish": false,
+    "updated": 1590447387087,
+    "version": "0.0.1",
+    "date": "2020-05-25 15:56:27"
+  }  
+  ```
+
+6. Invoke the action in the package.
+  ```bash
+  nim action invoke custom/identity  
+  
+    {}
+  ```
+
+### Set default parameters
+You can set default parameters for all the entities in a package by setting package-level parameters that are inherited by all actions in the package. To see how this works, try the following example:
+
+1. Update the `custom` package with two parameters: `city` and `country`.
+  ```bash
+  nim package update custom --param city Austin --param country USA
+  ```
+2. Display the parameters in the package, and see how the `identity` action in the package inherits parameters from the package.
+
+  ```bash
+  $ nim package get custom
+
+  {
+    "actions": [
+      {
+        "annotations": [
+          {
+            "key": "provide-api-key",
+            "value": false
+          },
+          {
+            "key": "exec",
+            "value": "nodejs:10"
+          }
+        ],
+        "name": "identity",
+        "version": "0.0.1"
+      }
+    ],
+    "annotations": [],
+    "binding": {},
+    "feeds": [],
+    "name": "custom",
+    "namespace": "my-namespace",
+    "parameters": [
+      {
+        "key": "city",
+        "value": "Austin"
+      },
+      {
+        "key": "country",
+        "value": "USA"
+      }
+    ],
+    "publish": false,
+    "updated": 1590448367857,
+    "version": "0.0.2",
+    "date": "2020-05-25 16:12:47"
+  }
+    ```
+3. Display the action and see the `city` and `country` parameters in the command output.  
+  ```bash
+  nim action get custom/identity
+
+  nim action get custom/identity
+{
+  "annotations": [
+    {
+      "key": "provide-api-key",
+      "value": false
+    },
+    {
+      "key": "exec",
+      "value": "nodejs:10"
+    }
+  ],
+  "exec": {
+    "kind": "nodejs:10",
+    "binary": false
+  },
+  "limits": {
+    "concurrency": 1,
+    "logs": 16,
+    "memory": 256,
+    "timeout": 3000
+  },
+  "name": "identity",
+  "namespace": "my-namespace",
+  "parameters": [
+    {
+      "key": "city",
+      "value": "Austin"
+    },
+    {
+      "key": "country",
+      "value": "USA"
+    }
+  ],
+  "publish": false,
+  "updated": 1590447831131,
+  "version": "0.0.1",
+  "date": "2020-05-25 16:03:51"
+}
+  ```
+4. Invoke the identity action without any parameters to verify that the action indeed inherits the parameters.  
+  ```bash
+  $ nim action invoke custom/identity
+
+  {
+    "city": "Austin",
+    "country": "USA"
+  }
+    ```
+5. Invoke the `identity` action with some parameters. Invocation parameters are merged with the package parameters and the invocation parameters override the package parameters.
+  ```bash
+  nim action invoke --result custom/identity --param city Dallas --param state Texas
+
+  {
+      "city": "Dallas",
+      "country": "USA",
+      "state": "Texas"
   }
   ```
 
-  Notice that the `place` parameter value that is specified with the action invocation overwrites the default value set in the `valhallaSamples` package binding.
+## Sharing a package
 
+After the actions and feeds that comprise a package are debugged and tested, the package can be shared with all Nimbella users. Sharing the package makes it possible for the users to bind the package, invoke actions in the package, and author rules and sequence actions.
+
+1. Share the package with all users:  
+  ```bash
+  $ nim package update custom --shared yes
+  ```
+2. Verify that the `publish` property of the package is now true.  
+  ```bash
+  $ nim package get custom
+  
+  {
+    "actions": [
+      {
+        "annotations": [
+          {
+            "key": "provide-api-key",
+            "value": false
+          },
+          {
+            "key": "exec",
+            "value": "nodejs:10"
+          }
+        ],
+        "name": "identity",
+        "version": "0.0.1"
+      }
+    ],
+    "annotations": [],
+    "binding": {},
+    "feeds": [],
+    "name": "custom",
+    "namespace": "my-namespace",
+    "parameters": [
+      {
+        "key": "city",
+        "value": "Austin"
+      },
+      {
+        "key": "country",
+        "value": "USA"
+      }
+    ],
+    "publish": true,
+    "updated": 1590449866968,
+    "version": "0.0.5",
+    "date": "2020-05-25 16:37:46"
+  }
+  ```
+
+Others can now use your `custom` package, including binding to the package or directly invoking an action in it but they must use the fully qualified name of the package to bind it or invoke actions in it. 
+
+**Note:** Actions and feeds within a shared package are _public_. If the package is private, then all of its contents are also private.
 
 ## Creating and using trigger feeds
 
-Feeds offer a convenient way to configure an external event source to fire these events to a OpenWhisk trigger. This example shows how to use a feed in the Alarms package to fire a trigger every second, and how to use a rule to invoke an action every second.
+**[[NH: I don't know what to do with this section. I see that `nim` has `trigger` and `rule` commands to manage entities, but I also see this statement in the CLI guide: "OpenWhisk has additional entities called rules, triggers, routes (aka “API gateway”), and activations; the nim command supports these individually but not as part of a project." I can't find any nim-specific documentation on triggers. I can't find anything in the Nimbella repos on GitHub that matches `/whisk.system/alarms`, so I don't know if you can import the OW package.]]**
+
+Feeds offer a convenient way to configure an external event source to fire these events to a trigger. This example shows how to use a feed in the Alarms package to fire a trigger every second, and how to use a rule to invoke an action every second.
 
 1. Get a description of the feed in the `/whisk.system/alarms` package.
 
@@ -247,190 +645,3 @@ Feeds offer a convenient way to configure an external event source to fire these
   You should see activations every eight seconds for the trigger, the rule, and the action. The action receives the parameters `{"name":"Mork", "place":"Ork"}` on every invocation.
 
 
-## Creating a package
-
-A package is used to organize a set of related actions and feeds.
-It also allows for parameters to be shared across all entities in the package.
-
-To create a custom package with a simple action in it, try the following example:
-
-1. Create a package called "custom".
-
-  ```
-  $ wsk package create custom
-  ```
-  ```
-  ok: created package custom
-  ```
-
-2. Get a summary of the package.
-
-  ```
-  $ wsk package get --summary custom
-  ```
-  ```
-  package /myNamespace/custom
-     (parameters: none defined)
-  ```
-
-  Notice that the package is empty.
-
-3. Create a file called `identity.js` that contains the following action code. This action returns all input parameters.
-
-  ```
-  function main(args) { return args; }
-  ```
-
-4. Create an `identity` action in the `custom` package.
-
-  ```
-  $ wsk action create custom/identity identity.js
-  ```
-  ```
-  ok: created action custom/identity
-  ```
-
-  Creating an action in a package requires that you prefix the action name with a package name. Package nesting is not allowed. A package can contain only actions and can't contain another package.
-
-5. Get a summary of the package again.
-
-  ```
-  $ wsk package get --summary custom
-  ```
-  ```
-  package /myNamespace/custom
-    (parameters: none defined)
-   action /myNamespace/custom/identity
-    (parameters: none defined)
-  ```
-
-  You can see the `custom/identity` action in your namespace now.
-
-6. Invoke the action in the package.
-
-  ```
-  $ wsk action invoke --result custom/identity
-  ```
-  ```
-  {}
-  ```
-
-
-You can set default parameters for all the entities in a package. You do this by setting package-level parameters that are inherited by all actions in the package. To see how this works, try the following example:
-
-1. Update the `custom` package with two parameters: `city` and `country`.
-
-  ```
-  $ wsk package update custom --param city Austin --param country USA
-  ```
-  ```
-  ok: updated package custom
-  ```
-
-2. Display the parameters in the package and action, and see how the `identity` action in the package inherits parameters from the package.
-
-  ```
-  $ wsk package get custom
-  ```
-  ```
-  ok: got package custom
-  ...
-  "parameters": [
-      {
-          "key": "city",
-          "value": "Austin"
-      },
-      {
-          "key": "country",
-          "value": "USA"
-      }
-  ]
-  ...
-  ```
-
-  ```
-  $ wsk action get custom/identity
-  ```
-  ```
-  ok: got action custom/identity
-  ...
-  "parameters": [
-      {
-          "key": "city",
-          "value": "Austin"
-      },
-      {
-          "key": "country",
-          "value": "USA"
-      }
-  ]
-  ...
-  ```
-
-3. Invoke the identity action without any parameters to verify that the action indeed inherits the parameters.
-
-  ```
-  $ wsk action invoke --result custom/identity
-  ```
-  ```
-  {
-      "city": "Austin",
-      "country": "USA"
-  }
-  ```
-
-4. Invoke the identity action with some parameters. Invocation parameters are merged with the package parameters; the invocation parameters override the package parameters.
-
-  ```
-  $ wsk action invoke --result custom/identity --param city Dallas --param state Texas
-  ```
-  ```
-  {
-      "city": "Dallas",
-      "country": "USA",
-      "state": "Texas"
-  }
-  ```
-
-
-## Sharing a package
-
-After the actions and feeds that comprise a package are debugged and tested, the package can be shared with all OpenWhisk users. Sharing the package makes it possible for the users to bind the package, invoke actions in the package, and author OpenWhisk rules and sequence actions.
-
-1. Share the package with all users:
-
-  ```
-  $ wsk package update custom --shared yes
-  ```
-  ```
-  ok: updated package custom
-  ```
-
-2. Display the `publish` property of the package to verify that it is now true.
-
-  ```
-  $ wsk package get custom
-  ```
-  ```
-  ok: got package custom
-  ...
-  "publish": true,
-  ...
-  ```
-
-
-Others can now use your `custom` package, including binding to the package or directly invoking an action in it. Other users must know the fully qualified names of the package to bind it or invoke actions in it. Actions and feeds within a shared package are _public_. If the package is private, then all of its contents are also private.
-
-1. Get a description of the package to show the fully qualified names of the package and action.
-
-  ```
-  $ wsk package get --summary custom
-  ```
-  ```
-  package /myNamespace/custom: Returns a result based on parameters city and country
-     (parameters: *city, *country)
-   action /myNamespace/custom/identity
-     (parameters: none defined)
-  ```
-
-  In the previous example, you're working with the `myNamespace` namespace, and this namespace appears in the fully qualified name.
